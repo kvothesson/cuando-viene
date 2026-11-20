@@ -72,6 +72,8 @@
     function recordar() { guardar(Object.assign(yo ? { lat: yo.lat, lon: yo.lon, nombre: yo.nombre } : {}, { cc: yo ? yo.cc : paisSel, km: +radio.value })); }
     let upp = 1, yo = null, deptos = [], localidades = null, paisSel = "AR", mundo = [], verPendiente = "";
     const porPais = {}, selPais = $("pais");
+    let grandes = null, nombresPais = {};
+    const setGrandes = {}; // por país, los nombres de sus ciudades grandes
 
     // ---------- vista ----------
     function tam() { const r = svg.getBoundingClientRect(); return { w: r.width || 600, h: r.height || 400, r }; }
@@ -237,11 +239,12 @@
       for (const f of orden) {
         const [, m, d] = f.fecha.split("-");
         const fila = html("div", cerca(f) === 0 ? "fecha cercana" : "fecha");
-        if (f.lat != null) fila.addEventListener("click", (e) => { // tocar una fecha la muestra en el mapa, junto a tu ciudad
+        if (f.lat != null) fila.addEventListener("click", (e) => {
           if (e.target.closest("a")) return;
-          const xs = [f.lon].concat(yo ? [yo.lon] : []), ys = [py(f.lat)].concat(yo ? [py(yo.lat)] : []);
-          const mx = Math.max(0.4, (Math.max(...xs) - Math.min(...xs)) * 0.35), my = Math.max(0.4, (Math.max(...ys) - Math.min(...ys)) * 0.35);
-          encuadrar(Math.min(...xs) - mx, Math.min(...ys) - my, Math.max(...xs) + mx, Math.max(...ys) + my, 0);
+          encuadrarCirculo(f, 45, 0.2); // el mapa va a donde es la función
+          // y se ven los nombres de las ciudades de ese país
+          const pc = f.pais || paisEn(f.lat, f.lon);
+          if (pc && pc !== paisSel && !yo) { paisSel = pc; localidades = null; if (selPais) selPais.value = pc; cargarLocalidades().then(pintarSobre); }
         });
         const dia = html("div", "dia");
         dia.append(html("b", "", String(+d)), html("small", "", MESES[m - 1]));
@@ -354,13 +357,19 @@
       const q = sinTildes(dir.value.trim());
       lista.replaceChildren();
       if (q.length < 2 || !localidades) return [];
-      const empieza = [], contiene = [];
+      // Orden: coincidencia exacta, después la que empieza igual, después la que lo contiene.
+      // A igual coincidencia, primero las ciudades grandes. Las de otros países suben solo si coinciden bien.
       const da = (l, fn) => fn(l.k) || (l.ks ? l.ks.some(fn) : false); // también por sus otros nombres
-      for (const l of localidades) {
-        if (da(l, (k) => k.startsWith(q))) empieza.push(l); else if (da(l, (k) => k.includes(q))) contiene.push(l);
-        if (empieza.length >= 8) break;
+      const tipo = (l) => (l.k === q || (l.ks && l.ks.includes(q)) ? 3 : da(l, (k) => k.startsWith(q)) ? 2 : da(l, (k) => k.includes(q)) ? 1 : 0);
+      const esGrande = (l) => !!(setGrandes[l.cc] && setGrandes[l.cc].has(l.k));
+      const cand = [];
+      for (const l of localidades) { const t = tipo(l); if (t) cand.push([t * 10 + (esGrande(l) ? 3 : 1), l]); }
+      if (grandes) for (const l of grandes) {
+        if (l.cc === paisSel) continue;
+        const t = tipo(l);
+        if (t > 1 || (t === 1 && q.length >= 4)) cand.push([t * 10 + (t === 3 ? 2 : 0.5), l]);
       }
-      let res = empieza.concat(contiene).slice(0, 8);
+      let res = cand.sort((a, b) => b[0] - a[0]).slice(0, 8).map((x) => x[1]);
       if (!res.length) {
         // escribieron una dirección entera: se busca la localidad adentro del texto
         const limpio = " " + q.replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim() + " ";
@@ -375,14 +384,16 @@
       for (const l of res) {
         const b = html("button", "", l.n);
         b.type = "button";
-        b.append(html("small", "", " " + [l.dep, l.prov].filter((x) => x && x !== l.n).join(", ")));
+        b.append(html("small", "", " " + [l.dep, l.prov, l.cc !== paisSel ? nombresPais[l.cc] : ""].filter((x) => x && x !== l.n).join(", ")));
         b.onclick = () => elegir(l);
         lista.append(b);
       }
-      if (!res.length) lista.append(html("p", "nota", paisSel === "AR" ? "No la encuentro. Escribí tu localidad o barrio, o tocá el mapa." : "No la encuentro. Probá con la ciudad más cercana o tocá el mapa."));
+      if (!res.length) lista.append(html("p", "nota", paisSel === "AR" ? "No la encuentro. Escribí tu localidad o barrio, o tocá el mapa." : "No la encuentro. Probá con la ciudad grande más cercana o tocá el mapa."));
       return res;
     }
-    function elegir(l, sinEncuadrar) { dir.value = l.n; lista.replaceChildren(); ponerYo(l.lat, l.lon, l.n, sinEncuadrar, l.cc); medir("localidad", l.n + ", " + (l.cc === "AR" ? l.prov || "AR" : l.cc)); }
+    function elegir(l, sinEncuadrar) {
+      if (l.cc && l.cc !== paisSel) { paisSel = l.cc; localidades = null; if (selPais) selPais.value = l.cc; cargarLocalidades().then(pintarSobre); } // ciudad de otro país: el país cambia solo
+      dir.value = l.n; lista.replaceChildren(); ponerYo(l.lat, l.lon, l.n, sinEncuadrar, l.cc); medir("localidad", l.n + ", " + (l.cc === "AR" ? l.prov || "AR" : l.cc)); }
     // Un toque en el mapa se cambia por la ciudad o localidad más cercana:
     // el punto exacto nunca se guarda ni sale del dispositivo.
     function elegirCercana(lat, lon, sinEncuadrar) {
@@ -395,9 +406,17 @@
         if (mejor) elegir(mejor, sinEncuadrar);
       });
     }
-    dir.addEventListener("focus", cargarLocalidades);
-    dir.addEventListener("input", () => cargarLocalidades().then(sugerir));
-    dir.addEventListener("keydown", (e) => { if (e.key === "Enter") cargarLocalidades().then(() => { const r = sugerir(); if (r[0]) elegir(r[0]); }); });
+    function cargarGrandes() {
+      if (grandes) return Promise.resolve();
+      return fetch(base + "datos/grandes.json").then((r) => r.json()).then((d) => {
+        grandes = d.map((l) => ({ n: l[0], dep: "", prov: "", cc: l[1], lat: l[2], lon: l[3], k: sinTildes(l[0]), ks: (l[4] || []).map(sinTildes) }));
+        for (const l of grandes) (setGrandes[l.cc] = setGrandes[l.cc] || new Set()).add(l.k);
+      }).catch(() => { grandes = []; });
+    }
+    const todo = () => Promise.all([cargarLocalidades(), cargarGrandes()]);
+    dir.addEventListener("focus", todo);
+    dir.addEventListener("input", () => { cargarLocalidades().then(sugerir); if (!grandes) cargarGrandes().then(sugerir); });
+    dir.addEventListener("keydown", (e) => { if (e.key === "Enter") todo().then(() => { const r = sugerir(); if (r[0]) elegir(r[0]); }); });
 
     // ---------- aviso en este dispositivo ----------
     function claveBytes(s) {
@@ -444,6 +463,7 @@
       fetch(base + "datos/paises.json").then((r) => r.json()).catch(() => ({ AR: "Argentina" })),
       previo.cc ? null : fetch(base + "datos/husos.json").then((r) => r.json()).catch(() => null),
     ]).then(([nombres, husos]) => {
+      nombresPais = nombres;
       if (selPais) {
         for (const [cc, n] of Object.entries(nombres)) { const o = document.createElement("option"); o.value = cc; o.textContent = n; selPais.append(o); }
         selPais.onchange = () => {

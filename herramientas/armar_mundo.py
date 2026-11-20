@@ -11,6 +11,7 @@ Salida:
   datos/husos.json             huso horario -> país (para adivinar el país del visitante sin rastrearlo)
   datos/capitales.json         capitales de país y de provincia: pesan más al elegir qué ciudades tienen página
   datos/ciudades/<PAIS>.json   ciudades de cada país para el buscador
+  datos/grandes.json           ciudades de más de 100.000 habitantes de todo el mundo, para buscar sin elegir país
   nube/ciudades.json           todas las ciudades, para que el robot ubique cada fecha
 
 Uso: python herramientas/armar_mundo.py
@@ -170,6 +171,10 @@ if __name__ == "__main__":
         if f["cap"]:
             capitales[f["cc"]].append(f["n"])
     print(f"capitales.json: {guardar(RAIZ / 'datos/capitales.json', dict(sorted(capitales.items()))):.0f} KB")
+
+    # ciudades grandes de todo el mundo: el buscador las encuentra sin elegir país antes
+    grandes = [[f["n"], f["cc"], f["lat"], f["lon"]] + ([f["alts"]] if f["alts"] else []) for f in filas if f["pob"] >= 100_000]
+    print(f"grandes.json: {guardar(RAIZ / 'datos/grandes.json', grandes):.0f} KB, {len(grandes)} ciudades")
 
     husos = sorted(por_huso)
     robot = {"husos": husos, "ciudades": [[f["n"], f["cc"], f["lat"], f["lon"], husos.index(f["tz"]), f["pob"]] + ([f["alts"]] if f["alts"] else []) for f in filas]}

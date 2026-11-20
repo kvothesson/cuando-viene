@@ -161,3 +161,6 @@ main.tablero{flex:1;min-height:0;width:100%;max-width:1200px;margin:0 auto;paddi
 .show.dentro .pin{fill:var(--cerca);stroke:var(--fondo)}
 .show.dentro text{fill:var(--cerca)}
 @media (max-width:820px){.tablero .fecha.cercana{border-color:var(--cerca);box-shadow:none;background:rgba(126,224,138,.07)}}
+
+/* agotado, en rojo */
+.sello{color:#ff7a6b;border-color:#8a3a33;background:rgba(255,90,70,.08)}
