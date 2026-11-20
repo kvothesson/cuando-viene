@@ -83,8 +83,10 @@ async function revisar(env) {
 // Se marca a quién le toca; el envío sale de a tandas porque el plan gratis limita los pedidos por corrida.
 async function encolar(env, a, e) {
   const msj = JSON.stringify({
-    titulo: `${a.nombre} en ${e.ciudad}${e.agotado ? " (agotado)" : ""}`,
-    cuerpo: `${cuando(e)}${e.lugar ? " · " + e.lugar : ""}. Tocá para ver las entradas.`,
+    // Que se entienda de un vistazo: quién, dónde, cuándo. La distancia la agrega /push/pendiente para cada uno.
+    titulo: `🎟 ${a.nombre} viene a ${e.ciudad}`,
+    cuerpo: `${cuando(e)}${e.lugar ? " · " + e.lugar : ""}`,
+    agotado: e.agotado ? 1 : 0, artista: a.slug,
     url: e.link || SITIO + a.slug + "/", lat: e.lat, lon: e.lon,
   });
   const porLon = 111.2 * Math.max(0.1, Math.cos((e.lat * Math.PI) / 180));
@@ -244,9 +246,17 @@ async function pedido(req, env, ctx) {
   if (p === "/push/pendiente" && req.method === "POST") {
     const b = await req.json().catch(() => null);
     if (!b || !b.endpoint) return json({ error: "datos incompletos" }, 400);
-    const { results } = await env.DB.prepare("SELECT id, pendiente FROM push WHERE endpoint=? AND pendiente IS NOT NULL LIMIT 5").bind(b.endpoint).all();
+    const { results } = await env.DB.prepare("SELECT id, pendiente, lat, lon, loc FROM push WHERE endpoint=? AND pendiente IS NOT NULL LIMIT 5").bind(b.endpoint).all();
     const msjs = [];
-    for (const r of results) { try { const x = JSON.parse(r.pendiente); msjs.push({ titulo: x.titulo, cuerpo: x.cuerpo, url: x.url }); } catch {} }
+    for (const r of results) { try { 
+        const x = JSON.parse(r.pendiente);
+        const cerca = x.lat != null ? `A ${Math.round(km(r, x))} km${r.loc ? " de " + r.loc : ""}. ` : "";
+        const pagina = SITIO + (x.artista ? x.artista + "/" : "");
+        msjs.push({
+          titulo: x.titulo, cuerpo: `${x.cuerpo}\n${cerca}${x.agotado ? "Figura agotado." : "Tocá para ver las entradas."}`,
+          url: x.url, mapa: pagina, imagen: x.artista ? pagina + "tarjeta.png" : "", marca: (x.artista || "") + "|" + x.titulo + "|" + x.cuerpo,
+        });
+      } catch {} }
     if (results.length) ctx.waitUntil(env.DB.prepare("UPDATE push SET pendiente=NULL WHERE endpoint=? AND enviar=0").bind(b.endpoint).run());
     return json({ mensajes: msjs });
   }
