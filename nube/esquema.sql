@@ -49,3 +49,20 @@ CREATE TABLE IF NOT EXISTS metricas (
   n INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (dia, artista, ev, clave)
 );
+
+-- Avisos por Telegram: el chat con el bot, la ciudad elegida y el radio. Se borra con /baja.
+CREATE TABLE IF NOT EXISTS tg (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  chat TEXT NOT NULL,         -- número del chat con el bot
+  artista TEXT NOT NULL,
+  lat REAL NOT NULL, lon REAL NOT NULL, km INTEGER NOT NULL, loc TEXT,
+  creado TEXT,
+  pendiente TEXT, enviar INTEGER DEFAULT 0,
+  ultimo_contacto TEXT,       -- para el "sigo mirando"
+  UNIQUE (chat, artista)
+);
+CREATE INDEX IF NOT EXISTS tg_enviar ON tg(enviar);
+-- Enlaces de un solo uso entre la página y el bot. Duran un día.
+CREATE TABLE IF NOT EXISTS tg_pedido (
+  codigo TEXT PRIMARY KEY, artista TEXT, lat REAL, lon REAL, km INTEGER, loc TEXT, creado TEXT
+);

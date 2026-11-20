@@ -485,6 +485,23 @@
       } catch (e) { msg.textContent = "No pude activar el aviso (" + ((e && e.message) || e) + "). Probá de nuevo en un rato."; }
     }
     $("suscribir").onclick = avisarAca;
+    // Por Telegram: se pide un enlace de un solo uso y se abre el chat con el bot
+    if ($("telegram")) $("telegram").onclick = async () => {
+      const msg = $("msg");
+      if (!yo) { msg.textContent = "Primero elegí tu ciudad en el buscador de arriba."; dir.focus(); return; }
+      msg.textContent = "Abriendo Telegram…";
+      try {
+        const r = await fetch(cfg.api + "/telegram/pedido", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ artista: cfg.artista, lat: yo.lat, lon: yo.lon, km: +radio.value, loc: yo.nombre }) });
+        const d = await r.json();
+        if (!r.ok || !d.link) throw new Error("pedido " + r.status);
+        medir("telegram", yo.nombre);
+        msg.replaceChildren("Se abre Telegram: tocá “Iniciar” y listo. Si no se abrió, ");
+        const a = html("a", "", "abrilo desde acá"); a.href = d.link; a.target = "_blank"; a.rel = "noopener";
+        msg.append(a, ".");
+        location.href = d.link;
+      } catch (e) { msg.textContent = "No pude armar el enlace de Telegram. Probá de nuevo en un rato."; }
+    };
     // ¿Este dispositivo ya está anotado? Entonces se puede actualizar o dar de baja.
     function estadoAviso(on) { $("suscribir").textContent = on ? "Actualizar mi aviso" : "Avisame si viene cerca"; if ($("baja")) $("baja").hidden = !on; }
     async function miCasilla() {
@@ -536,6 +553,7 @@
     if (cfg.api) fetch(cfg.api + "/fechas/" + cfg.artista).then((r) => r.json()).then((d) => {
       if (!d || !Array.isArray(d.fechas)) return;
       fechas = ordenar(d.fechas); vapid = d.vapid || "";
+      if (d.telegram && $("telegram")) $("telegram").hidden = false;
       pintarSobre(); pintarFechas();
     }).catch(() => {});
 

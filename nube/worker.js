@@ -7,7 +7,7 @@ import { leerPogo, leerAgenda, unir, mismo, km } from "./fuentes.js";
 
 // Lectores de páginas oficiales: cada formato nuevo suma el suyo en fuentes.js
 const LECTORES = { agenda: leerAgenda };
-const EVENTOS = ["visita", "localidad", "radio", "aviso", "calendario", "entradas"];
+const EVENTOS = ["visita", "localidad", "radio", "aviso", "calendario", "entradas", "telegram"];
 const AGENTE = "cuando-viene/1.0 (+https://kvothesson.com/cuando-viene/)";
 const SITIO = "https://kvothesson.com/cuando-viene/";
 const EMPUJES = /^(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|web\.push\.apple\.com|[a-z0-9-]+\.notify\.windows\.com|[a-z0-9.-]+\.push\.apple\.com)$/;
@@ -32,6 +32,8 @@ async function bajar(url) {
   return r.text();
 }
 async function anotar(env, clave, ok, detalle) {
+  const antes = clave.startsWith("fuente:") ? await env.DB.prepare("SELECT ok FROM estado WHERE clave=?").bind(clave).first() : null;
+  if (antes && !!antes.ok !== !!ok) await avisarDueno(env, ok ? `✅ Volvió a leerse ${escT(clave)} (${escT(detalle)}).` : `⚠️ Dejó de leerse ${escT(clave)}: ${escT(detalle)}`);
   await env.DB.prepare(
     "INSERT INTO estado (clave, ok, detalle, ts, ultimo_ok) VALUES (?1, ?2, ?3, ?4, CASE WHEN ?2=1 THEN ?4 END) " +
     "ON CONFLICT(clave) DO UPDATE SET ok=?2, detalle=?3, ts=?4, ultimo_ok=CASE WHEN ?2=1 THEN ?4 ELSE ultimo_ok END"
@@ -92,7 +94,9 @@ async function encolar(env, a, e) {
   const porLon = 111.2 * Math.max(0.1, Math.cos((e.lat * Math.PI) / 180));
   const r = await env.DB.prepare("UPDATE push SET pendiente=?, enviar=1, intentos=0 WHERE artista=? AND abs(lat-?)*111.2<=km AND abs(lon-?)*?<=km")
     .bind(msj, a.slug, e.lat, e.lon, porLon).run();
-  return r.meta.changes || 0;
+  const t = await env.DB.prepare("UPDATE tg SET pendiente=?, enviar=1 WHERE artista=? AND abs(lat-?)*111.2<=km AND abs(lon-?)*?<=km")
+    .bind(msj, a.slug, e.lat, e.lon, porLon).run();
+  return (r.meta.changes || 0) + (t.meta.changes || 0);
 }
 
 let jwtCache = {};
@@ -129,6 +133,83 @@ async function despachar(env, tope = 40) {
     else await env.DB.prepare("UPDATE push SET intentos=intentos+1, enviar=CASE WHEN intentos>=4 THEN 0 ELSE 1 END WHERE id=?").bind(s.id).run();
   }
   return { enviados, bajas, fuera };
+}
+
+// ---------------- Telegram: el aviso que no depende del aparato ----------------
+// De cada persona se guarda el número de su chat con el bot, la ciudad elegida y el radio.
+const escT = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+async function tg(env, metodo, cuerpo) {
+  if (!env.TG_TOKEN) return { ok: false, status: 0 };
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${env.TG_TOKEN}/${metodo}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cuerpo) });
+    return { ok: r.ok, status: r.status };
+  } catch { return { ok: false, status: 0 }; }
+}
+const decir = (env, chat, texto, botones) => tg(env, "sendMessage", Object.assign(
+  { chat_id: chat, text: texto, parse_mode: "HTML", disable_web_page_preview: true },
+  botones ? { reply_markup: { inline_keyboard: [botones.map(([t, u]) => ({ text: t, url: u }))] } } : {}));
+async function avisarDueno(env, texto) {
+  const d = await env.DB.prepare("SELECT detalle FROM estado WHERE clave='dueno'").first();
+  if (d && d.detalle) await decir(env, d.detalle, texto);
+}
+// Manda los avisos pendientes de Telegram, de a tandas
+async function despacharTg(env, tope = 15) {
+  if (!env.TG_TOKEN) return { enviados: 0, bajas: 0, fuera: 0 };
+  const { results } = await env.DB.prepare("SELECT id, chat, lat, lon, km, loc, pendiente FROM tg WHERE enviar=1 LIMIT ?").bind(tope).all();
+  let enviados = 0, bajas = 0, fuera = 0;
+  for (const s of results) {
+    let m = null;
+    try { m = JSON.parse(s.pendiente); } catch {}
+    if (!m || km(s, m) > s.km) { await env.DB.prepare("UPDATE tg SET enviar=0, pendiente=NULL WHERE id=?").bind(s.id).run(); fuera++; continue; }
+    const pagina = SITIO + (m.artista ? m.artista + "/" : "");
+    const texto = `<b>${escT(m.titulo)}</b>\n${escT(m.cuerpo)}\nA ${Math.round(km(s, m))} km${s.loc ? " de " + escT(s.loc) : ""}.${m.agotado ? "\nFigura agotado." : ""}`;
+    const r = await decir(env, s.chat, texto, [[m.agotado ? "Ver igual" : "Ver entradas", m.url || pagina], ["Ver en el mapa", pagina]]);
+    if (r.status === 403) { await env.DB.prepare("DELETE FROM tg WHERE chat=?").bind(s.chat).run(); bajas++; } // bloqueó al bot
+    else if (r.ok) { await env.DB.prepare("UPDATE tg SET enviar=0, pendiente=NULL, ultimo_contacto=? WHERE id=?").bind(ahora(), s.id).run(); enviados++; }
+  }
+  return { enviados, bajas, fuera };
+}
+// "Sigo mirando": si pasan 75 días sin novedades, un mensaje corto. Así el silencio no se confunde con una falla.
+async function sigoVivo(env) {
+  const hace = new Date(Date.now() - 75 * 86400e3).toISOString();
+  const { results } = await env.DB.prepare("SELECT id, chat, artista, km, loc FROM tg WHERE enviar=0 AND (ultimo_contacto IS NULL OR ultimo_contacto<?) LIMIT 15").bind(hace).all();
+  for (const s of results) {
+    const a = ARTISTAS.find((x) => x.slug === s.artista);
+    const r = await decir(env, s.chat, `👋 Sigo mirando la agenda de ${escT(a ? a.nombre : s.artista)}. Todavía no anunció nada a menos de ${s.km} km de ${escT(s.loc || "tu ciudad")}. Apenas aparezca, te escribo.`);
+    if (r.status === 403) await env.DB.prepare("DELETE FROM tg WHERE chat=?").bind(s.chat).run();
+    else if (r.ok) await env.DB.prepare("UPDATE tg SET ultimo_contacto=? WHERE id=?").bind(ahora(), s.id).run();
+  }
+}
+// Lo que la gente le escribe al bot
+async function telegramEntrante(env, up) {
+  const msg = up && up.message;
+  if (!msg || !msg.text || !msg.chat || msg.chat.type !== "private") return;
+  const chat = String(msg.chat.id), [orden, arg] = msg.text.trim().split(/\s+/, 2);
+  const cmd = orden.toLowerCase().replace(/@.*$/, "");
+  if (cmd === "/start" && arg) {
+    const p = await env.DB.prepare("SELECT * FROM tg_pedido WHERE codigo=?").bind(arg).first();
+    const a = p && ARTISTAS.find((x) => x.slug === p.artista);
+    if (!a) return decir(env, chat, `Ese enlace ya venció. Volvé a <a href="${SITIO}">la página</a>, elegí tu ciudad y tocá “Por Telegram” de nuevo.`);
+    await env.DB.prepare("INSERT INTO tg (chat, artista, lat, lon, km, loc, creado, ultimo_contacto) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(chat, artista) DO UPDATE SET lat=excluded.lat, lon=excluded.lon, km=excluded.km, loc=excluded.loc, ultimo_contacto=excluded.ultimo_contacto")
+      .bind(chat, a.slug, p.lat, p.lon, p.km, p.loc, ahora(), ahora()).run();
+    await env.DB.prepare("DELETE FROM tg_pedido WHERE codigo=?").bind(arg).run();
+    return decir(env, chat, `✅ Listo. Te escribo por acá apenas <b>${escT(a.nombre)}</b> anuncie una fecha a menos de <b>${p.km} km de ${escT(p.loc || "tu ciudad")}</b>.\n\nNo depende de tu celular ni de tu navegador: mientras tengas Telegram, te llega. Si pasan un par de meses sin novedades, te mando un “sigo mirando”.\n\n/estado para ver qué tenés activado · /baja para dejar de recibir`);
+  }
+  if (cmd === "/start") return decir(env, chat, `Hola. Te aviso cuando tu artista anuncia un show cerca tuyo.\n\nPara activarlo, entrá a <a href="${SITIO}">kvothesson.com/cuando-viene</a>, elegí tu ciudad y hasta cuántos km irías, y tocá “Por Telegram”.`);
+  if (cmd === "/estado") {
+    const { results } = await env.DB.prepare("SELECT artista, km, loc FROM tg WHERE chat=? ORDER BY artista").bind(chat).all();
+    if (!results.length) return decir(env, chat, `No tenés ningún aviso activado. Entrá a <a href="${SITIO}">kvothesson.com/cuando-viene</a> para activar uno.`);
+    return decir(env, chat, "Tenés activado:\n" + results.map((r) => { const a = ARTISTAS.find((x) => x.slug === r.artista); return `• <b>${escT(a ? a.nombre : r.artista)}</b>, a menos de ${r.km} km de ${escT(r.loc || "tu ciudad")}`; }).join("\n") + "\n\n/baja para dejar de recibir");
+  }
+  if (cmd === "/baja") {
+    await env.DB.prepare("DELETE FROM tg WHERE chat=?").bind(chat).run();
+    return decir(env, chat, "Listo, no te escribo más. No quedó guardado nada tuyo. Si querés volver, activalo de nuevo desde la página.");
+  }
+  if (cmd === "/dueno" && env.CLAVE && arg === env.CLAVE) { // el dueño recibe acá los avisos de que algo se rompió
+    await env.DB.prepare("INSERT INTO estado (clave, ok, detalle, ts) VALUES ('dueno', 1, ?1, ?2) ON CONFLICT(clave) DO UPDATE SET detalle=?1, ts=?2").bind(chat, ahora()).run();
+    return decir(env, chat, "Anotado. Te aviso por acá si una fuente deja de leerse y cuando vuelva.");
+  }
+  return decir(env, chat, "No entendí eso. Probá /estado o /baja.");
 }
 
 // ---------------- calendario ----------------
@@ -216,7 +297,7 @@ async function pedido(req, env, ctx) {
     const corrida = await env.DB.prepare("SELECT ts FROM estado WHERE clave='corrida'").first();
     // países donde alguna vez se le vio una fecha: sirven para armar sus páginas por país
     const vistos = await env.DB.prepare("SELECT DISTINCT pais FROM fechas WHERE artista=? AND pais<>''").bind(a.slug).all();
-    return json({ artista: a.slug, nombre: a.nombre, actualizado: corrida ? corrida.ts : null, vapid: env.VAPID_PUB, paises: vistos.results.map((r) => r.pais), fechas: await vigentes(env, a.slug) }, 200, { "Cache-Control": "public, max-age=300" });
+    return json({ artista: a.slug, nombre: a.nombre, actualizado: corrida ? corrida.ts : null, vapid: env.VAPID_PUB, telegram: !!(env.TG_TOKEN && env.TG_BOT), paises: vistos.results.map((r) => r.pais), fechas: await vigentes(env, a.slug) }, 200, { "Cache-Control": "public, max-age=300" });
   }
 
   if ((m = p.match(/^\/cal\/([a-z0-9-]+)\.ics$/)) && req.method === "GET") {
@@ -275,6 +356,22 @@ async function pedido(req, env, ctx) {
     return panel(env);
   }
 
+  // Telegram: la página pide un enlace de un solo uso con la ciudad y el radio adentro
+  if (p === "/telegram/pedido" && req.method === "POST") {
+    const b = await req.json().catch(() => null), a = b && ARTISTAS.find((x) => x.slug === b.artista);
+    const lat = +(b || {}).lat, lon = +(b || {}).lon, radio = Math.round(+(b || {}).km);
+    if (!env.TG_BOT || !a || !isFinite(lat) || !isFinite(lon) || !(radio >= 5 && radio <= 2000)) return json({ error: "datos incompletos" }, 400);
+    const codigo = b64u(crypto.getRandomValues(new Uint8Array(15)));
+    await env.DB.prepare("INSERT INTO tg_pedido (codigo, artista, lat, lon, km, loc, creado) VALUES (?,?,?,?,?,?,?)").bind(codigo, a.slug, lat, lon, radio, String(b.loc || "").slice(0, 60), ahora()).run();
+    ctx.waitUntil(env.DB.prepare("DELETE FROM tg_pedido WHERE creado<?").bind(new Date(Date.now() - 86400e3).toISOString()).run());
+    return json({ link: `https://t.me/${env.TG_BOT}?start=${codigo}` });
+  }
+  if (p === "/telegram/entrante" && req.method === "POST") {
+    if (!env.TG_SECRETO || req.headers.get("X-Telegram-Bot-Api-Secret-Token") !== env.TG_SECRETO) return json({ error: "sin permiso" }, 403);
+    await telegramEntrante(env, await req.json().catch(() => null));
+    return json({ ok: true });
+  }
+
   if (p === "/salud") {
     const { results } = await env.DB.prepare("SELECT clave, ok, detalle, ts, ultimo_ok FROM estado ORDER BY clave").all();
     const viejo = new Date(Date.now() - 6 * 3600e3).toISOString();
@@ -293,7 +390,7 @@ async function pedido(req, env, ctx) {
       const a = ARTISTAS.find((x) => x.slug === u.searchParams.get("artista")) || ARTISTAS[0];
       const e = { fecha: hoyAR(), hora: "21:00", lugar: "Teatro de prueba", ciudad: u.searchParams.get("ciudad") || "Prueba", lat: +u.searchParams.get("lat"), lon: +u.searchParams.get("lon"), link: "", agotado: 0 };
       const marcados = await encolar(env, a, e);
-      return json({ marcados, envio: await despachar(env) });
+      return json({ marcados, envio: await despachar(env), telegram: await despacharTg(env) });
     }
   }
   return json({ servicio: "cuando-viene", sitio: SITIO }, p === "/" ? 200 : 404);
@@ -307,7 +404,10 @@ export default {
   // Corre cada minuto: los avisos pendientes salen enseguida; las fuentes se leen cada 30.
   async scheduled(ev, env, ctx) {
     const min = new Date(ev.scheduledTime).getUTCMinutes();
+    const t = new Date(ev.scheduledTime);
     if (min % 30 === 0) await revisar(env);
-    await despachar(env);
+    await despachar(env, 25);
+    await despacharTg(env);
+    if (t.getUTCHours() === 15 && min === 15) await sigoVivo(env); // una vez por día, al mediodía de Argentina
   },
 };
