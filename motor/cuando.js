@@ -394,10 +394,10 @@
       if (!yo) { msg.textContent = "Primero elegí tu localidad."; return; }
       if (!cfg.api || !vapid) { msg.textContent = "No pude conectar con el servicio de avisos. Probá en un rato."; return; }
       if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
-        msg.textContent = "Este navegador no admite avisos. En iPhone, primero agregá la página a la pantalla de inicio. Si no, usá el calendario."; return;
+        msg.textContent = "Este navegador no admite avisos. En iPhone, primero agregá la página a la pantalla de inicio."; return;
       }
       try {
-        if ((await Notification.requestPermission()) !== "granted") { msg.textContent = "Sin permiso de notificaciones no puedo avisarte acá. Podés usar el calendario."; return; }
+        if ((await Notification.requestPermission()) !== "granted") { msg.textContent = "Sin permiso de notificaciones no puedo avisarte acá."; return; }
         const reg = await navigator.serviceWorker.register(base + "sw.js");
         await navigator.serviceWorker.ready;
         const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: claveBytes(vapid) }));
@@ -407,7 +407,7 @@
         msg.textContent = `Listo. Te aviso en este dispositivo cuando haya una fecha a menos de ${radio.value} km de ${yo.nombre}.`;
         $("suscribir").textContent = "Actualizar mi aviso";
         medir("aviso", yo.nombre);
-      } catch (e) { msg.textContent = "No pude activar el aviso (" + ((e && e.message) || e) + "). Probá de nuevo o usá el calendario."; }
+      } catch (e) { msg.textContent = "No pude activar el aviso (" + ((e && e.message) || e) + "). Probá de nuevo en un rato."; }
     }
     $("suscribir").onclick = avisarAca;
 
