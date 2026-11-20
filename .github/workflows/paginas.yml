@@ -1,0 +1,25 @@
+# Una vez por día vuelve a escribir las páginas con las fechas vigentes,
+# para que Google lea siempre la agenda al día.
+name: Páginas al día
+on:
+  schedule:
+    - cron: "17 9 * * *" # 06:17 de Argentina
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  armar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python herramientas/armar_paginas.py
+      - name: Guardar si cambió algo
+        run: |
+          git config user.name "Kvothesson"
+          git config user.email "46162626+kvothesson@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "Páginas al día"
+          git push

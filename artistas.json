@@ -1,0 +1,13 @@
+[
+  {
+    "slug": "lucho-mellera",
+    "nombre": "Lucho Mellera",
+    "tipo": "comediante",
+    "acento": "#ffcc33",
+    "show": "El Unipersonal",
+    "fuentes": {
+      "pogo": "https://pogo.ar/artista/lucho-mellera/",
+      "oficial": { "url": "https://luchomellera.com/agenda/", "lector": "agenda" }
+    }
+  }
+]

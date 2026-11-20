@@ -1,0 +1,92 @@
+/* Cuándo viene: estilo común. Cada artista cambia solo las variables. */
+:root{
+  --acento:#ffcc33;
+  --fondo:#14110f;
+  --panel:#1f1b17;
+  --tierra:#2a251f;
+  --texto:#f3ece2;
+  --suave:#a99c8b;
+  --linea:#3a332b;
+  --cerca:#7ee08a;
+  --titulo:"Archivo Black",Impact,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fondo);color:var(--texto);font:16px/1.5 Inter,system-ui,sans-serif}
+header{padding:28px 16px 8px;max-width:1100px;margin:auto}
+.marquesina{display:inline-block;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--fondo);background:var(--acento);padding:3px 10px;border-radius:2px;text-decoration:none}
+h1{font-family:var(--titulo);font-weight:400;font-size:clamp(32px,6vw,58px);line-height:1;margin:14px 0 6px}
+h1 span{color:var(--acento)}
+.bajada{color:var(--suave);margin:0;max-width:640px}
+main{max-width:1100px;margin:auto;padding:16px;display:grid;grid-template-columns:1fr 360px;gap:16px;align-items:start}
+.lienzo{position:sticky;top:16px;border:1px solid var(--linea);border-radius:10px;overflow:hidden;background:#0d0b0a}
+#mapa{display:block;width:100%;height:min(78vh,640px);touch-action:none;cursor:grab;user-select:none}
+#mapa:active{cursor:grabbing}
+.botones{position:absolute;top:10px;left:10px;display:flex;flex-direction:column;gap:6px}
+.botones button{width:36px;height:36px;padding:0;background:var(--panel);color:var(--texto);border:1px solid var(--linea);font-size:18px}
+.ayuda{position:absolute;bottom:8px;left:10px;margin:0;font-size:12px;color:var(--suave);pointer-events:none}
+@media (max-width:820px){main{grid-template-columns:1fr}.lienzo{position:relative;top:0}#mapa{height:56vh}}
+
+/* mapa */
+#mapa path,#mapa polygon,#mapa circle{vector-effect:non-scaling-stroke}
+.tierra{fill:var(--tierra);stroke:none}
+.provs{fill:none;stroke:var(--suave);stroke-width:1;stroke-opacity:.55;stroke-linejoin:round}
+.deptos{fill:none;stroke:var(--suave);stroke-width:.6;stroke-opacity:0;stroke-linejoin:round;transition:stroke-opacity .3s}
+#mapa.cerca .deptos{stroke-opacity:.22}
+.radio{fill:var(--acento);fill-opacity:.1;stroke:var(--acento);stroke-width:1.5;stroke-dasharray:6 4}
+#mapa text{fill:var(--texto);font-family:Inter,system-ui,sans-serif;font-weight:600;paint-order:stroke;stroke:#0d0b0a;stroke-width:3px;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+#mapa text.depto{fill:var(--suave);font-weight:400;text-anchor:middle;pointer-events:none;stroke-width:2px}
+.pin{fill:var(--acento);stroke:var(--fondo);stroke-width:3}
+.show{cursor:pointer}
+.show:hover text{fill:var(--acento)}
+.yo{fill:var(--cerca);stroke:var(--fondo);stroke-width:3}
+
+/* panel */
+aside{display:flex;flex-direction:column;gap:16px}
+.caja{background:var(--panel);border:1px solid var(--linea);border-radius:10px;padding:16px}
+.caja h2{font-size:14px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--suave);margin:0 0 10px}
+label{display:block;font-size:14px;color:var(--suave);margin:10px 0 4px}
+input[type=text],input[type=email]{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--linea);background:var(--fondo);color:var(--texto);font:inherit}
+input[type=range]{width:100%;accent-color:var(--acento)}
+button{font:600 15px Inter,system-ui,sans-serif;border:0;border-radius:8px;padding:10px 14px;cursor:pointer;background:var(--acento);color:var(--fondo)}
+button.sec{background:transparent;color:var(--texto);border:1px solid var(--linea)}
+button.ancho{width:100%;margin-top:8px}
+#sugerencias{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+#sugerencias button{background:transparent;color:var(--texto);text-align:left;font-weight:600;padding:8px 10px;border-radius:6px}
+#sugerencias button:hover,#sugerencias button:focus{background:var(--fondo)}
+#sugerencias small{color:var(--suave);font-weight:400}
+#donde{color:var(--cerca);font-size:14px;margin:8px 0 0;min-height:1.4em}
+.km{font-family:var(--titulo);color:var(--acento);font-size:22px}
+.fecha{display:grid;grid-template-columns:58px 1fr;gap:12px;padding:10px 0;border-top:1px solid var(--linea)}
+.fecha:first-child{border-top:0}
+.dia{text-align:center;background:var(--fondo);border-radius:8px;padding:6px 0;line-height:1.1;align-self:start}
+.dia b{display:block;font-family:var(--titulo);font-weight:400;font-size:22px}
+.dia small{color:var(--suave);text-transform:uppercase;font-size:11px}
+.lugar{font-weight:600}
+.meta{color:var(--suave);font-size:14px}
+.fecha a{color:var(--acento)}
+.cerca{color:var(--cerca);font-weight:600}
+.lejos{color:var(--suave)}
+.nota{font-size:12px;color:var(--suave);margin:8px 0 0}
+footer{max-width:1100px;margin:auto;padding:16px 16px 40px;color:var(--suave);font-size:13px}
+footer a{color:var(--suave)}
+
+/* agotado, calendario */
+.sello{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--suave);border:1px solid var(--linea);border-radius:4px;padding:0 6px;vertical-align:middle}
+.show.agotado .pin{fill:var(--suave)}
+.show.agotado text{fill:var(--suave)}
+.enlaces{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.enlaces a{flex:1;text-align:center;text-decoration:none;font-weight:600;font-size:14px;color:var(--texto);border:1px solid var(--linea);border-radius:8px;padding:9px 10px;white-space:nowrap}
+.enlaces a:hover{border-color:var(--acento);color:var(--acento)}
+.caja h3{font-size:15px;margin:16px 0 0}
+[hidden]{display:none!important}
+
+/* texto para leer y portada */
+.texto{max-width:1100px;margin:auto;padding:8px 16px 0}
+.texto h2{font-family:var(--titulo);font-weight:400;font-size:22px;margin:24px 0 6px}
+.texto p{color:var(--suave);max-width:720px;margin:6px 0}
+.texto strong{color:var(--texto)}
+.tarjetas{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:16px}
+.tarjeta{display:block;text-decoration:none;background:var(--panel);border:1px solid var(--linea);border-left:4px solid var(--acento);border-radius:10px;padding:16px}
+.tarjeta b{display:block;font-family:var(--titulo);font-weight:400;font-size:22px;color:var(--texto)}
+.tarjeta span{color:var(--suave);font-size:14px}
+.tarjeta:hover{border-color:var(--acento)}

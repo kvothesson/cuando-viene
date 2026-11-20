@@ -1,0 +1,5 @@
+node_modules/
+.cloudflare/
+.secretos.json
+*.local.md
+datos/crudo/
