@@ -9,6 +9,7 @@ Salida:
   datos/mundo.json             contorno de los países (sin Argentina: esa la dibuja mapa.json con más detalle)
   datos/paises.json            código -> nombre en castellano, solo países con ciudades
   datos/husos.json             huso horario -> país (para adivinar el país del visitante sin rastrearlo)
+  datos/capitales.json         capitales de país y de provincia: pesan más al elegir qué ciudades tienen página
   datos/ciudades/<PAIS>.json   ciudades de cada país para el buscador
   nube/ciudades.json           todas las ciudades, para que el robot ubique cada fecha
 
@@ -136,7 +137,7 @@ def ciudades():
             if k and k not in vistos and latino(a):
                 vistos.add(k)
                 alts.append(a)
-        filas.append({"n": nombre, "cc": cc, "reg": regiones.get(f"{cc}.{adm}", ""), "lat": round(lat, 2), "lon": round(lon, 2),
+        filas.append({"cap": t[7] in ("PPLC", "PPLA"), "n": nombre, "cc": cc, "reg": regiones.get(f"{cc}.{adm}", ""), "lat": round(lat, 2), "lon": round(lon, 2),
                       "pob": pob, "tz": tz, "alts": alts[:220]})
     filas.sort(key=lambda f: -f["pob"])
     return filas
@@ -163,6 +164,12 @@ if __name__ == "__main__":
     for f in filas:
         por_huso[f["tz"]][f["cc"]] += f["pob"]
     print(f"husos.json: {guardar(RAIZ / 'datos/husos.json', {tz: c.most_common(1)[0][0] for tz, c in sorted(por_huso.items())}):.0f} KB")
+
+    capitales = defaultdict(list)
+    for f in filas:
+        if f["cap"]:
+            capitales[f["cc"]].append(f["n"])
+    print(f"capitales.json: {guardar(RAIZ / 'datos/capitales.json', dict(sorted(capitales.items()))):.0f} KB")
 
     husos = sorted(por_huso)
     robot = {"husos": husos, "ciudades": [[f["n"], f["cc"], f["lat"], f["lon"], husos.index(f["tz"]), f["pob"]] + ([f["alts"]] if f["alts"] else []) for f in filas]}

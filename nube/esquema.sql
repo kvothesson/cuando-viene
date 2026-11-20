@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS fechas (
   tz TEXT,                    -- huso horario del lugar, por ejemplo Europe/Madrid
   link TEXT,
   agotado INTEGER DEFAULT 0,
+  precio REAL, moneda TEXT,   -- precio "desde", si la fuente lo trae
   fuentes TEXT,               -- pogo, oficial o pogo+oficial
   visto TEXT,                 -- cuándo la vio el robot por primera vez
   ultima_vez TEXT             -- última corrida en que siguió apareciendo

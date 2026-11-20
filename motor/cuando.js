@@ -68,6 +68,7 @@
     svg.append(gMundo, gTierra, gSobre);
 
     const vista = { cx: -63.5, cy: 44.7, w: 30 };
+    let auto = false; // true mientras la página propone un lugar por su cuenta: ese no se recuerda
     let upp = 1, yo = null, deptos = [], localidades = null, paisSel = "AR", mundo = [], verPendiente = "";
     const porPais = {}, selPais = $("pais");
 
@@ -229,7 +230,8 @@
         const dia = html("div", "dia");
         dia.append(html("b", "", String(+d)), html("small", "", MESES[m - 1]));
         const info = html("div");
-        const meta = html("div", "meta", f.ciudad + (f.hora ? " · " + f.hora + " h" : ""));
+        const desde = f.precio && !f.agotado ? " · desde " + (!f.moneda || f.moneda === "ARS" ? "$ " : "") + Math.round(f.precio).toLocaleString("es-AR") + (f.moneda && f.moneda !== "ARS" ? " " + f.moneda : "") : "";
+        const meta = html("div", "meta", f.ciudad + (f.hora ? " · " + f.hora + " h" : "") + desde);
         if (yo && f.lat != null) {
           const k = Math.round(km(yo, f));
           meta.append(" · ", html("span", k <= lim ? "cerca" : "lejos", k <= lim ? `a ${k} km de vos` : `a ${k} km`));
@@ -252,7 +254,7 @@
     function ponerYo(lat, lon, nombre, sinEncuadrar, cc) {
       yo = { lat, lon, nombre: nombre || "", cc: cc || paisSel }; // siempre el centro de una localidad
       $("donde").textContent = nombre ? "Estás en " + nombre : "";
-      guardar({ lat: yo.lat, lon: yo.lon, nombre: yo.nombre, cc: yo.cc, km: +radio.value });
+      if (!auto) guardar({ lat: yo.lat, lon: yo.lon, nombre: yo.nombre, cc: yo.cc, km: +radio.value });
       if (!sinEncuadrar) encuadrarRadio(); else pintarSobre();
       pintarFechas(); armarCalendario();
     }
@@ -308,7 +310,8 @@
     }
     window.addEventListener("pointerup", soltar);
     window.addEventListener("pointercancel", soltar);
-    svg.addEventListener("wheel", (e) => { e.preventDefault(); zoom(Math.exp(e.deltaY * 0.0015), e.clientX, e.clientY); }, { passive: false });
+    // La rueda sola baja la página; con Ctrl (o el gesto de pellizco del panel táctil) acerca el mapa
+    svg.addEventListener("wheel", (e) => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); zoom(Math.exp(e.deltaY * 0.0015), e.clientX, e.clientY); }, { passive: false });
     $("mas").onclick = () => zoom(0.6);
     $("menos").onclick = () => zoom(1 / 0.6);
     $("todo").onclick = pais;
@@ -438,8 +441,13 @@
         ponerYo(previo.lat, previo.lon, previo.nombre, false, cc);
         cargarLocalidades().then(pintarSobre);
       } else {
-        cambiarPais((cfg.foco && cfg.foco.cc && nombres[cfg.foco.cc]) ? cfg.foco.cc : cc, !cfg.foco);
-        if (cfg.foco) encuadrarCirculo(cfg.foco, 250, 0.2); // página de una ciudad: arranca mirando ahí
+        // Página de un país o de una ciudad: arranca mirando ahí. Si es una ciudad, queda elegida
+        // (sin recordarla) para que el aviso esté a un toque.
+        const f = cfg.foco, fcc = f && f.cc && nombres[f.cc] ? f.cc : "";
+        const conPunto = !!f && typeof f.lat === "number";
+        cambiarPais(fcc || cc, !conPunto);
+        if (conPunto && f.nombre) { auto = true; ponerYo(f.lat, f.lon, f.nombre, false, fcc || cc); auto = false; dir.value = f.nombre; }
+        else if (conPunto) encuadrarCirculo(f, 250, 0.2);
         armarCalendario();
       }
     });

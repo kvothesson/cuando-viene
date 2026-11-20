@@ -9,7 +9,7 @@ Páginas de fans, no oficiales. Sin cuenta, sin mail y sin guardar direcciones: 
 
 - `artistas.json`: un artista por entrada (nombre, tipo, color y de dónde se leen sus fechas).
 - `plantilla.html` + `motor/`: la página y el mapa, dibujado por código con datos abiertos. No usa servicios de mapas.
-- `herramientas/armar_paginas.py`: escribe una página por artista con las fechas ya en el HTML. Corre solo una vez por día.
+- `herramientas/armar_paginas.py`: escribe las páginas con todo ya en el HTML: una por artista, una por país y una por ciudad (con fecha, o sin fecha con la más cercana), más la tarjeta para compartir. Corre solo una vez por día.
 - `herramientas/armar_datos.py`: achica los datos de provincias, partidos y localidades.
 - `herramientas/armar_mundo.py`: arma el contorno de los países, las ciudades de cada país para el buscador y la lista que usa el robot para ubicar fechas en cualquier lugar.
 - `nube/`: el robot en Cloudflare. Lee las fechas cada 30 minutos, arma el calendario por localidad y manda las notificaciones.

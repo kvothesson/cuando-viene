@@ -11,6 +11,7 @@
 <meta property="og:description" content="{{DESCRIPCION}}">
 <meta property="og:url" content="{{URL}}">
 <meta property="og:locale" content="es_AR">
+{{OG}}
 <meta name="theme-color" content="#14110f">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;600&display=swap" rel="stylesheet">
@@ -20,7 +21,7 @@
 </head>
 <body>
 <header>
-  <a class="marquesina" href="{{BASE}}">Cuándo viene</a>
+  {{MIGAS}}
   <h1>{{H1}}</h1>
   <p class="bajada">Sus próximas fechas en el mapa. Elegí tu ciudad y a cuántos km estás dispuesto a ir, y te avisamos apenas aparezca {{UNA_FECHA}} cerca. Gratis y sin cuenta.</p>
 </header>
@@ -59,8 +60,8 @@
       <p class="nota">Una notificación apenas aparezca una fecha dentro de tu radio. Sin cuenta y sin mail. Si cambiás de celular o de navegador, activalo de nuevo.</p>
       <p id="msg" class="nota" aria-live="polite"></p>
       <div id="calendario" hidden>
-        <h3>Y en tu calendario</h3>
-        <p class="nota">Las fechas cercanas aparecen solas en tu agenda y siguen ahí aunque cambies de celular. No suena: es para no perderlas de vista.</p>
+        <h3>Otra forma: suscribir tu calendario</h3>
+        <p class="nota">Te suscribís una sola vez, aunque hoy no haya nada cerca. Cuando anuncie una fecha dentro de tu radio, aparece sola en tu agenda. No suena como la notificación, pero sigue funcionando aunque cambies de celular.</p>
         <div class="enlaces">
           <a id="cal-google" target="_blank" rel="noopener">Google Calendar</a>
           <a id="cal-otro">Otro calendario</a>
@@ -73,6 +74,7 @@
 <section class="texto">
   <h2>{{H2}}</h2>
   {{RESUMEN_HTML}}
+  {{ENLACES_HTML}}
   <h2>¿Cómo me entero cuando venga a mi ciudad?</h2>
   <p>Elegí tu ciudad en el mapa, mové la distancia hasta donde te sirva viajar y tocá “Avisame en este dispositivo”. Revisamos la agenda de {{NOMBRE}} cada 30 minutos y, cuando aparece {{UNA_FECHA}} dentro de tu radio, te llega una notificación con el link a las entradas. No hace falta cuenta ni mail.</p>
 </section>

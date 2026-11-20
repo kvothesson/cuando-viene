@@ -29,6 +29,7 @@ export function leerPogo(html) {
         lat: num(geo.latitude), lon: num(geo.longitude),
         link: of.url || x.url || "",
         agotado: /SoldOut/i.test(of.availability || "") ? 1 : 0,
+        precio: num(of.price), moneda: of.priceCurrency || "", // precio "desde", cuando la fuente lo trae
         fuentes: ["pogo"],
       });
     }

@@ -64,12 +64,12 @@ async function revisar(env) {
     for (const e of vistas) {
       const f = filas.find((x) => mismo(x, e));
       if (f) {
-        await env.DB.prepare("UPDATE fechas SET hora=?, lugar=?, link=?, agotado=?, lat=COALESCE(?,lat), lon=COALESCE(?,lon), pais=?, tz=?, fuentes=?, ultima_vez=? WHERE id=?")
-          .bind(e.hora || f.hora, e.lugar || f.lugar, e.link || f.link, e.agotado, e.lat, e.lon, e.pais || f.pais, e.tz || f.tz || "", e.fuentes.join("+"), ahora(), f.id).run();
+        await env.DB.prepare("UPDATE fechas SET hora=?, lugar=?, link=?, agotado=?, lat=COALESCE(?,lat), lon=COALESCE(?,lon), pais=?, tz=?, precio=COALESCE(?,precio), moneda=COALESCE(?,moneda), fuentes=?, ultima_vez=? WHERE id=?")
+          .bind(e.hora || f.hora, e.lugar || f.lugar, e.link || f.link, e.agotado, e.lat, e.lon, e.pais || f.pais, e.tz || f.tz || "", e.precio ?? null, e.moneda || null, e.fuentes.join("+"), ahora(), f.id).run();
         continue;
       }
-      await env.DB.prepare("INSERT INTO fechas (artista, fecha, hora, lugar, ciudad, pais, lat, lon, tz, link, agotado, fuentes, visto, ultima_vez) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
-        .bind(a.slug, e.fecha, e.hora, e.lugar, e.ciudad, e.pais, e.lat, e.lon, e.tz || "", e.link, e.agotado, e.fuentes.join("+"), ahora(), ahora()).run();
+      await env.DB.prepare("INSERT INTO fechas (artista, fecha, hora, lugar, ciudad, pais, lat, lon, tz, link, agotado, precio, moneda, fuentes, visto, ultima_vez) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+        .bind(a.slug, e.fecha, e.hora, e.lugar, e.ciudad, e.pais, e.lat, e.lon, e.tz || "", e.link, e.agotado, e.precio ?? null, e.moneda || null, e.fuentes.join("+"), ahora(), ahora()).run();
       nuevas++;
       if (e.lat != null) await encolar(env, a, e);
     }
@@ -171,7 +171,7 @@ function calendario(a, fechas, loc, radio) {
 
 async function vigentes(env, slug) {
   const hace = new Date(Date.now() - 3 * 86400e3).toISOString(); // si dejó de aparecer en las fuentes, se cae sola
-  const { results } = await env.DB.prepare("SELECT id, fecha, hora, lugar, ciudad, pais, lat, lon, tz, link, agotado, visto FROM fechas WHERE artista=? AND fecha>=? AND ultima_vez>=? ORDER BY fecha, hora")
+  const { results } = await env.DB.prepare("SELECT id, fecha, hora, lugar, ciudad, pais, lat, lon, tz, link, agotado, precio, moneda, visto FROM fechas WHERE artista=? AND fecha>=? AND ultima_vez>=? ORDER BY fecha, hora")
     .bind(slug, hoyAR(), hace).all();
   return results;
 }
@@ -212,7 +212,9 @@ async function pedido(req, env, ctx) {
     const a = ARTISTAS.find((x) => x.slug === m[1]);
     if (!a) return json({ error: "no conozco a ese artista" }, 404);
     const corrida = await env.DB.prepare("SELECT ts FROM estado WHERE clave='corrida'").first();
-    return json({ artista: a.slug, nombre: a.nombre, actualizado: corrida ? corrida.ts : null, vapid: env.VAPID_PUB, fechas: await vigentes(env, a.slug) }, 200, { "Cache-Control": "public, max-age=300" });
+    // países donde alguna vez se le vio una fecha: sirven para armar sus páginas por país
+    const vistos = await env.DB.prepare("SELECT DISTINCT pais FROM fechas WHERE artista=? AND pais<>''").bind(a.slug).all();
+    return json({ artista: a.slug, nombre: a.nombre, actualizado: corrida ? corrida.ts : null, vapid: env.VAPID_PUB, paises: vistos.results.map((r) => r.pais), fechas: await vigentes(env, a.slug) }, 200, { "Cache-Control": "public, max-age=300" });
   }
 
   if ((m = p.match(/^\/cal\/([a-z0-9-]+)\.ics$/)) && req.method === "GET") {
