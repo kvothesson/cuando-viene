@@ -151,3 +151,13 @@ main.tablero{flex:1;min-height:0;width:100%;max-width:1200px;margin:0 auto;paddi
   .tablero .dia{background:var(--panel)}
   .tablero .ayuda{font-size:11px}
 }
+
+/* la fecha que te queda cerca, bien a la vista */
+.tablero #donde.hay{color:var(--cerca);font-weight:600}
+.tablero #donde.nohay{color:var(--suave);font-weight:400}
+.tablero .fecha{cursor:pointer}
+.tablero .fecha.cercana{box-shadow:inset 3px 0 0 var(--cerca);padding-left:10px;background:rgba(126,224,138,.07)}
+.tablero .fecha.cercana .dia{outline:2px solid var(--cerca)}
+.show.dentro .pin{fill:var(--cerca);stroke:var(--fondo)}
+.show.dentro text{fill:var(--cerca)}
+@media (max-width:820px){.tablero .fecha.cercana{border-color:var(--cerca);box-shadow:none;background:rgba(126,224,138,.07)}}

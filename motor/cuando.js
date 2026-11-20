@@ -205,10 +205,13 @@
           if (++n >= 30) break;
         }
       }
-      for (const f of fechas) {
+      if (yo) gSobre.append(el("circle", { cx: yo.lon, cy: py(yo.lat), r: 6 * upp, class: "yo" }));
+      // primero las lejanas y al final las que entran en tu radio, así quedan arriba de todo
+      const enRadio = (f) => !!yo && f.lat != null && km(yo, f) <= +radio.value;
+      for (const f of fechas.slice().sort((a, b) => enRadio(a) - enRadio(b))) {
         if (f.lat == null) continue;
         const [, m, d] = f.fecha.split("-");
-        const a = el("a", { href: f.link || "#", target: "_blank", rel: "noopener", class: f.agotado ? "show agotado" : "show" });
+        const a = el("a", { href: f.link || "#", target: "_blank", rel: "noopener", class: "show" + (f.agotado ? " agotado" : "") + (enRadio(f) ? " dentro" : "") });
         const x = f.lon, y = py(f.lat);
         a.append(
           el("circle", { cx: x, cy: y, r: 7 * upp, class: "pin" }),
@@ -216,7 +219,6 @@
         );
         gSobre.append(a);
       }
-      if (yo) gSobre.append(el("circle", { cx: yo.lon, cy: py(yo.lat), r: 6 * upp, class: "yo" }));
     }
 
     // ---------- lista de fechas ----------
@@ -228,9 +230,19 @@
       // con un lugar elegido, primero las que entran en tu radio
       const cerca = (f) => (yo && f.lat != null && km(yo, f) <= lim ? 0 : 1);
       const orden = yo ? fechas.map((f, i) => [cerca(f), i, f]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map((x) => x[2]) : fechas;
+      const cuantas = orden.filter((f) => cerca(f) === 0).length;
+      const donde = $("donde");
+      donde.textContent = !yo ? "" : cuantas ? `· ${cuantas} a menos de ${lim} km de ${yo.nombre}` : `· ninguna a menos de ${lim} km de ${yo.nombre}`;
+      donde.className = cuantas ? "hay" : "nohay";
       for (const f of orden) {
         const [, m, d] = f.fecha.split("-");
-        const fila = html("div", "fecha");
+        const fila = html("div", cerca(f) === 0 ? "fecha cercana" : "fecha");
+        if (f.lat != null) fila.addEventListener("click", (e) => { // tocar una fecha la muestra en el mapa, junto a tu ciudad
+          if (e.target.closest("a")) return;
+          const xs = [f.lon].concat(yo ? [yo.lon] : []), ys = [py(f.lat)].concat(yo ? [py(yo.lat)] : []);
+          const mx = Math.max(0.4, (Math.max(...xs) - Math.min(...xs)) * 0.35), my = Math.max(0.4, (Math.max(...ys) - Math.min(...ys)) * 0.35);
+          encuadrar(Math.min(...xs) - mx, Math.min(...ys) - my, Math.max(...xs) + mx, Math.max(...ys) + my, 0);
+        });
         const dia = html("div", "dia");
         dia.append(html("b", "", String(+d)), html("small", "", MESES[m - 1]));
         const info = html("div");
@@ -257,7 +269,6 @@
     // ---------- tu punto ----------
     function ponerYo(lat, lon, nombre, sinEncuadrar, cc) {
       yo = { lat, lon, nombre: nombre || "", cc: cc || paisSel }; // siempre el centro de una localidad
-      $("donde").textContent = nombre ? "· cerca de " + nombre : "";
       recordar();
       if (!sinEncuadrar) encuadrarRadio(); else pintarSobre();
       pintarFechas(); armarCalendario();
