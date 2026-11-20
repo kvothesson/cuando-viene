@@ -365,7 +365,7 @@
       return res;
     }
     function elegir(l, sinEncuadrar) { dir.value = l.n; lista.replaceChildren(); ponerYo(l.lat, l.lon, l.n, sinEncuadrar, l.cc); medir("localidad", l.n + ", " + (l.cc === "AR" ? l.prov || "AR" : l.cc)); }
-    // Un punto cualquiera (toque en el mapa o GPS) se cambia por su localidad más cercana:
+    // Un toque en el mapa se cambia por la ciudad o localidad más cercana:
     // el punto exacto nunca se guarda ni sale del dispositivo.
     function elegirCercana(lat, lon, sinEncuadrar) {
       const cc = paisEn(lat, lon) || paisSel;
@@ -380,10 +380,6 @@
     dir.addEventListener("focus", cargarLocalidades);
     dir.addEventListener("input", () => cargarLocalidades().then(sugerir));
     dir.addEventListener("keydown", (e) => { if (e.key === "Enter") cargarLocalidades().then(() => { const r = sugerir(); if (r[0]) elegir(r[0]); }); });
-    $("ubicame").onclick = () => {
-      if (!navigator.geolocation) return;
-      navigator.geolocation.getCurrentPosition((p) => elegirCercana(p.coords.latitude, p.coords.longitude),() => { $("donde").textContent = "No pude leer tu ubicación. Buscá tu localidad o tocá el mapa."; });
-    };
 
     // ---------- aviso en este dispositivo ----------
     function claveBytes(s) {
