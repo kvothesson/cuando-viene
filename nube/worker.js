@@ -1,6 +1,7 @@
 // Robot de Cuándo viene: lee las fechas de cada artista, las sirve a la página,
 // arma el calendario filtrado por localidad y manda las notificaciones.
 import LOC from "../datos/localidades.json";
+import MUNDO from "./ciudades.json"; // ciudades del mundo, para ubicar las fechas de afuera
 import ARTISTAS from "../artistas.json"; // sumar un artista = sumar una entrada ahí
 import { leerPogo, leerAgenda, unir, mismo, km } from "./fuentes.js";
 
@@ -57,18 +58,18 @@ async function revisar(env) {
     } catch (e) { await anotar(env, `fuente:${a.slug}:oficial`, false, e.message); }
     if (!alguna) { resumen.push({ artista: a.slug, error: "ninguna fuente respondió" }); continue; }
 
-    const vistas = unir(pogo, oficial, LOC).filter((e) => e.fecha >= hoy);
+    const vistas = unir(pogo, oficial, LOC, MUNDO, a.pais || "AR").filter((e) => e.fecha >= hoy);
     const { results: filas } = await env.DB.prepare("SELECT * FROM fechas WHERE artista=? AND fecha>=?").bind(a.slug, hoy).all();
     let nuevas = 0;
     for (const e of vistas) {
       const f = filas.find((x) => mismo(x, e));
       if (f) {
-        await env.DB.prepare("UPDATE fechas SET hora=?, lugar=?, link=?, agotado=?, lat=COALESCE(?,lat), lon=COALESCE(?,lon), pais=?, fuentes=?, ultima_vez=? WHERE id=?")
-          .bind(e.hora || f.hora, e.lugar || f.lugar, e.link || f.link, e.agotado, e.lat, e.lon, e.pais || f.pais, e.fuentes.join("+"), ahora(), f.id).run();
+        await env.DB.prepare("UPDATE fechas SET hora=?, lugar=?, link=?, agotado=?, lat=COALESCE(?,lat), lon=COALESCE(?,lon), pais=?, tz=?, fuentes=?, ultima_vez=? WHERE id=?")
+          .bind(e.hora || f.hora, e.lugar || f.lugar, e.link || f.link, e.agotado, e.lat, e.lon, e.pais || f.pais, e.tz || f.tz || "", e.fuentes.join("+"), ahora(), f.id).run();
         continue;
       }
-      await env.DB.prepare("INSERT INTO fechas (artista, fecha, hora, lugar, ciudad, pais, lat, lon, link, agotado, fuentes, visto, ultima_vez) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)")
-        .bind(a.slug, e.fecha, e.hora, e.lugar, e.ciudad, e.pais, e.lat, e.lon, e.link, e.agotado, e.fuentes.join("+"), ahora(), ahora()).run();
+      await env.DB.prepare("INSERT INTO fechas (artista, fecha, hora, lugar, ciudad, pais, lat, lon, tz, link, agotado, fuentes, visto, ultima_vez) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+        .bind(a.slug, e.fecha, e.hora, e.lugar, e.ciudad, e.pais, e.lat, e.lon, e.tz || "", e.link, e.agotado, e.fuentes.join("+"), ahora(), ahora()).run();
       nuevas++;
       if (e.lat != null) await encolar(env, a, e);
     }
@@ -150,10 +151,10 @@ function calendario(a, fechas, loc, radio) {
   for (const f of fechas) {
     const d = f.fecha.replace(/-/g, "");
     L.push("BEGIN:VEVENT", `UID:${a.slug}-${f.id}@cuando-viene.kvothesson.com`, `DTSTAMP:${sello}`);
-    if (f.hora && f.pais === "AR") { // Argentina no cambia la hora: siempre UTC-3
-      const ini = new Date(`${f.fecha}T${f.hora}:00-03:00`), fin = new Date(ini.getTime() + 2 * 3600e3);
-      const z = (x) => x.toISOString().replace(/[-:]|\.\d+/g, "");
-      L.push(`DTSTART:${z(ini)}`, `DTEND:${z(fin)}`);
+    if (f.hora && f.tz) { // hora local del lugar, con su huso: el calendario la convierte para quien la mira
+      const ini = new Date(`${f.fecha}T${f.hora}:00Z`), fin = new Date(ini.getTime() + 2 * 3600e3);
+      const z = (x) => x.toISOString().replace(/[-:]|\.\d+|Z/g, "");
+      L.push(`DTSTART;TZID=${f.tz}:${z(ini)}`, `DTEND;TZID=${f.tz}:${z(fin)}`);
     } else {
       const sig = new Date(new Date(f.fecha + "T12:00:00Z").getTime() + 86400e3).toISOString().slice(0, 10).replace(/-/g, "");
       L.push(`DTSTART;VALUE=DATE:${d}`, `DTEND;VALUE=DATE:${sig}`);
@@ -170,7 +171,7 @@ function calendario(a, fechas, loc, radio) {
 
 async function vigentes(env, slug) {
   const hace = new Date(Date.now() - 3 * 86400e3).toISOString(); // si dejó de aparecer en las fuentes, se cae sola
-  const { results } = await env.DB.prepare("SELECT id, fecha, hora, lugar, ciudad, pais, lat, lon, link, agotado, visto FROM fechas WHERE artista=? AND fecha>=? AND ultima_vez>=? ORDER BY fecha, hora")
+  const { results } = await env.DB.prepare("SELECT id, fecha, hora, lugar, ciudad, pais, lat, lon, tz, link, agotado, visto FROM fechas WHERE artista=? AND fecha>=? AND ultima_vez>=? ORDER BY fecha, hora")
     .bind(slug, hoyAR(), hace).all();
   return results;
 }

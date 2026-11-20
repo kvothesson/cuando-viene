@@ -7,7 +7,7 @@
   const rad = (x) => (x * Math.PI) / 180;
   const deg = (x) => (x * 180) / Math.PI;
   // Mercator, en "grados": x = longitud, y crece hacia el sur
-  const py = (lat) => -deg(Math.log(Math.tan(Math.PI / 4 + rad(lat) / 2)));
+  const py = (lat) => -deg(Math.log(Math.tan(Math.PI / 4 + rad(Math.max(-85, Math.min(85, lat))) / 2)));
   const ilat = (y) => deg(2 * Math.atan(Math.exp(rad(-y))) - Math.PI / 2);
   const $ = (id) => document.getElementById(id);
   const sinTildes = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -64,17 +64,18 @@
     }
     medir("visita", "", true);
     const svg = $("mapa"), radio = $("radio"), kmv = $("kmv");
-    const gTierra = el("g"), gSobre = el("g");
-    svg.append(gTierra, gSobre);
+    const gMundo = el("g"), gTierra = el("g"), gSobre = el("g");
+    svg.append(gMundo, gTierra, gSobre);
 
     const vista = { cx: -63.5, cy: 44.7, w: 30 };
-    let upp = 1, yo = null, deptos = [], localidades = null, provincias = [];
+    let upp = 1, yo = null, deptos = [], localidades = null, paisSel = "AR", mundo = [], verPendiente = "";
+    const porPais = {}, selPais = $("pais");
 
     // ---------- vista ----------
     function tam() { const r = svg.getBoundingClientRect(); return { w: r.width || 600, h: r.height || 400, r }; }
     function aplicar() {
       const t = tam();
-      vista.w = Math.min(60, Math.max(0.12, vista.w));
+      vista.w = Math.min(400, Math.max(0.12, vista.w));
       const h = (vista.w * t.h) / t.w;
       upp = vista.w / t.w;
       svg.setAttribute("viewBox", `${vista.cx - vista.w / 2} ${vista.cy - h / 2} ${vista.w} ${h}`);
@@ -87,7 +88,18 @@
       vista.w = Math.max(x1 - x0, ((y1 - y0) * t.w) / t.h) * (1 + margen);
       aplicar();
     }
-    const pais = () => encuadrar(-73.6, py(-21.7), -53.6, py(-55.1), 0.06);
+    function verPais(cc) {
+      if (cc === "AR") return encuadrar(-73.6, py(-21.7), -53.6, py(-55.1), 0.06);
+      const p = mundo.find((x) => x.c === cc);
+      if (!p) { verPendiente = cc; return; } // todavía no llegó el mapa del mundo
+      verPendiente = "";
+      encuadrar(p.b[0], py(p.b[3]), p.b[2], py(p.b[1]), 0.12);
+    }
+    const pais = () => verPais(paisSel);
+    function encuadrarCirculo(p, r, margen) {
+      const n = destino(p, r, 0), s = destino(p, r, 180), e = destino(p, r, 90), o = destino(p, r, 270);
+      encuadrar(o.lon, py(n.lat), e.lon, py(s.lat), margen);
+    }
     function aMapa(cx, cy) {
       const t = tam(), h = (vista.w * t.h) / t.w;
       return { x: vista.cx - vista.w / 2 + (cx - t.r.left) * upp, y: vista.cy - h / 2 + (cy - t.r.top) * upp };
@@ -96,7 +108,7 @@
       const t = tam();
       const p = cx == null ? { x: vista.cx, y: vista.cy } : aMapa(cx, cy);
       const antes = vista.w;
-      vista.w = Math.min(60, Math.max(0.12, vista.w * factor));
+      vista.w = Math.min(400, Math.max(0.12, vista.w * factor));
       const f = vista.w / antes;
       vista.cx = p.x + (vista.cx - p.x) * f; vista.cy = p.y + (vista.cy - p.y) * f;
       aplicar();
@@ -127,6 +139,36 @@
       pintarSobre();
     });
 
+    // El resto del mundo: contornos de países. Argentina va encima, con su detalle.
+    fetch(base + "datos/mundo.json").then((r) => r.json()).then((m) => {
+      gMundo.append(el("path", { d: camino(m.paises, m.escala), class: "mundo" }));
+      mundo = m.paises.map((p) => {
+        const anillos = p.r.map((r) => {
+          let lon = r[0], lat = r[1];
+          const a = [[lon / m.escala, lat / m.escala]];
+          for (let i = 2; i < r.length; i += 2) { lon += r[i]; lat += r[i + 1]; a.push([lon / m.escala, lat / m.escala]); }
+          return a;
+        });
+        const caja = [180, 90, -180, -90];
+        for (const a of anillos) for (const [x, y] of a) { if (x < caja[0]) caja[0] = x; if (x > caja[2]) caja[2] = x; if (y < caja[1]) caja[1] = y; if (y > caja[3]) caja[3] = y; }
+        return { c: p.c, b: p.b, caja, anillos };
+      });
+      if (verPendiente) verPais(verPendiente);
+    }).catch(() => {});
+    // ¿En qué país cae un punto del mapa?
+    function paisEn(lat, lon) {
+      for (const p of mundo) {
+        if (!p.c || lon < p.caja[0] || lon > p.caja[2] || lat < p.caja[1] || lat > p.caja[3]) continue;
+        for (const a of p.anillos) {
+          let dentro = false;
+          for (let i = 0, j = a.length - 1; i < a.length; j = i++)
+            if ((a[i][1] > lat) !== (a[j][1] > lat) && lon < ((a[j][0] - a[i][0]) * (lat - a[i][1])) / (a[j][1] - a[i][1]) + a[i][0]) dentro = !dentro;
+          if (dentro) return p.c;
+        }
+      }
+      return lon > -74 && lon < -53 && lat > -56 && lat < -21 ? "AR" : "";
+    }
+
     // ---------- lo que va encima: radio, nombres, fechas, vos ----------
     function pintarSobre() {
       gSobre.replaceChildren();
@@ -147,6 +189,18 @@
           if (puestos.some((p) => Math.abs(p.x - d.x) < (p.a + ancho) / 2 && Math.abs(p.y - d.y) < alto)) continue;
           puestos.push({ x: d.x, y: d.y, a: ancho });
           gSobre.append(el("text", { x: d.x, y: d.y, class: "depto", "font-size": letra * 0.85 }, d.n));
+        }
+      }
+      if (vista.w < 14 && paisSel !== "AR" && localidades) { // fuera de Argentina: nombres de ciudades, las más grandes primero
+        const puestos = []; let n = 0;
+        for (const l of localidades) {
+          const x = l.lon, y = py(l.lat);
+          if (x < x0 || x > x0 + vista.w || y < y0 || y > y0 + h) continue;
+          const ancho = l.n.length * letra * 0.5;
+          if (puestos.some((p) => Math.abs(p.x - x) < (p.a + ancho) / 2 && Math.abs(p.y - y) < letra * 1.2)) continue;
+          puestos.push({ x, y, a: ancho });
+          gSobre.append(el("text", { x, y, class: "depto", "font-size": letra * 0.85 }, l.n));
+          if (++n >= 30) break;
         }
       }
       for (const f of fechas) {
@@ -195,10 +249,10 @@
     }
 
     // ---------- tu punto ----------
-    function ponerYo(lat, lon, nombre, sinEncuadrar) {
-      yo = { lat, lon, nombre: nombre || "" }; // siempre el centro de una localidad
+    function ponerYo(lat, lon, nombre, sinEncuadrar, cc) {
+      yo = { lat, lon, nombre: nombre || "", cc: cc || paisSel }; // siempre el centro de una localidad
       $("donde").textContent = nombre ? "Estás en " + nombre : "";
-      guardar({ lat: yo.lat, lon: yo.lon, nombre: yo.nombre, km: +radio.value });
+      guardar({ lat: yo.lat, lon: yo.lon, nombre: yo.nombre, cc: yo.cc, km: +radio.value });
       if (!sinEncuadrar) encuadrarRadio(); else pintarSobre();
       pintarFechas(); armarCalendario();
     }
@@ -216,12 +270,10 @@
     for (const id of ["cal-google", "cal-otro"]) if ($(id)) $(id).addEventListener("click", () => medir("calendario", id === "cal-google" ? "google" : "otro"));
     function encuadrarRadio() {
       if (!yo) return;
-      const r = +radio.value;
-      const n = destino(yo, r, 0), s = destino(yo, r, 180), e = destino(yo, r, 90), o = destino(yo, r, 270);
-      encuadrar(o.lon, py(n.lat), e.lon, py(s.lat), 0.25);
+      encuadrarCirculo(yo, +radio.value, 0.25);
     }
     radio.addEventListener("input", () => { kmv.textContent = radio.value; pintarSobre(); pintarFechas(); armarCalendario(); });
-    radio.addEventListener("change", () => { medir("radio", radio.value <= 30 ? "hasta 30" : radio.value <= 80 ? "31 a 80" : radio.value <= 200 ? "81 a 200" : "más de 200"); encuadrarRadio(); if (yo) guardar({ lat: yo.lat, lon: yo.lon, nombre: yo.nombre, km: +radio.value }); });
+    radio.addEventListener("change", () => { medir("radio", radio.value <= 30 ? "hasta 30" : radio.value <= 80 ? "31 a 80" : radio.value <= 200 ? "81 a 200" : "más de 200"); encuadrarRadio(); if (yo) guardar({ lat: yo.lat, lon: yo.lon, nombre: yo.nombre, cc: yo.cc, km: +radio.value }); });
 
     // ---------- mover el mapa ----------
     const dedos = new Map();
@@ -264,20 +316,30 @@
 
     // ---------- buscador de localidades ----------
     const dir = $("dir"), lista = $("sugerencias");
+    // Argentina llega hasta el barrio; el resto del mundo, ciudades de más de 15.000 habitantes.
+    // Cada país es un archivo aparte: se baja solo el que hace falta.
     function cargarLocalidades() {
-      if (localidades) return Promise.resolve();
-      return fetch(base + "datos/localidades.json").then((r) => r.json()).then((d) => {
-        provincias = d.provincias;
-        localidades = d.localidades.map((l) => ({ n: l[0], dep: l[1], prov: provincias[l[2]], lat: l[3], lon: l[4], k: sinTildes(l[0]) }));
-      });
+      const cc = paisSel;
+      if (porPais[cc]) { localidades = porPais[cc]; return Promise.resolve(); }
+      const p = cc === "AR"
+        ? fetch(base + "datos/localidades.json").then((r) => r.json()).then((d) => d.localidades.map((l) => ({ n: l[0], dep: l[1], prov: d.provincias[l[2]], lat: l[3], lon: l[4], k: sinTildes(l[0]), cc })))
+        : fetch(base + "datos/ciudades/" + cc + ".json").then((r) => r.json()).then((d) => d.map((l) => ({ n: l[0], dep: "", prov: l[1], lat: l[2], lon: l[3], k: sinTildes(l[0]), ks: (l[4] || []).map(sinTildes), cc })));
+      return p.then((l) => { porPais[cc] = l; }, () => { porPais[cc] = []; }).then(() => { if (paisSel === cc) localidades = porPais[cc]; });
+    }
+    function cambiarPais(cc, mover) {
+      paisSel = cc; localidades = null;
+      if (selPais) selPais.value = cc;
+      if (mover) verPais(cc);
+      return cargarLocalidades().then(pintarSobre);
     }
     function sugerir() {
       const q = sinTildes(dir.value.trim());
       lista.replaceChildren();
       if (q.length < 2 || !localidades) return [];
       const empieza = [], contiene = [];
+      const da = (l, fn) => fn(l.k) || (l.ks ? l.ks.some(fn) : false); // también por sus otros nombres
       for (const l of localidades) {
-        if (l.k.startsWith(q)) empieza.push(l); else if (l.k.includes(q)) contiene.push(l);
+        if (da(l, (k) => k.startsWith(q))) empieza.push(l); else if (da(l, (k) => k.includes(q))) contiene.push(l);
         if (empieza.length >= 8) break;
       }
       let res = empieza.concat(contiene).slice(0, 8);
@@ -299,13 +361,15 @@
         b.onclick = () => elegir(l);
         lista.append(b);
       }
-      if (!res.length) lista.append(html("p", "nota", "No la encuentro. Escribí tu localidad o barrio, o tocá el mapa."));
+      if (!res.length) lista.append(html("p", "nota", paisSel === "AR" ? "No la encuentro. Escribí tu localidad o barrio, o tocá el mapa." : "No la encuentro. Probá con la ciudad más cercana o tocá el mapa."));
       return res;
     }
-    function elegir(l, sinEncuadrar) { dir.value = l.n; lista.replaceChildren(); ponerYo(l.lat, l.lon, l.n, sinEncuadrar); medir("localidad", l.n + (l.prov ? ", " + l.prov : "")); }
+    function elegir(l, sinEncuadrar) { dir.value = l.n; lista.replaceChildren(); ponerYo(l.lat, l.lon, l.n, sinEncuadrar, l.cc); medir("localidad", l.n + ", " + (l.cc === "AR" ? l.prov || "AR" : l.cc)); }
     // Un punto cualquiera (toque en el mapa o GPS) se cambia por su localidad más cercana:
     // el punto exacto nunca se guarda ni sale del dispositivo.
     function elegirCercana(lat, lon, sinEncuadrar) {
+      const cc = paisEn(lat, lon) || paisSel;
+      if (cc !== paisSel) { paisSel = cc; localidades = null; if (selPais) selPais.value = cc; }
       return cargarLocalidades().then(() => {
         const p = { lat, lon };
         let mejor = null, dm = Infinity;
@@ -355,13 +419,35 @@
       pintarSobre(); pintarFechas();
     }).catch(() => {});
 
-    // ---------- arranque ----------
+    // ---------- arranque: país y lugar ----------
+    // El país se adivina por el huso horario del navegador: no se consulta ningún servicio ni se rastrea a nadie.
     const previo = leer();
-    if (previo && typeof previo.lat === "number") {
-      if (previo.km) { radio.value = previo.km; kmv.textContent = radio.value; }
-      ponerYo(previo.lat, previo.lon, previo.nombre);
-    } else { pais(); pintarFechas(); armarCalendario(); }
+    const hayPrevio = previo && typeof previo.lat === "number";
+    pintarFechas();
+    Promise.all([
+      fetch(base + "datos/paises.json").then((r) => r.json()).catch(() => ({ AR: "Argentina" })),
+      hayPrevio && previo.cc ? null : fetch(base + "datos/husos.json").then((r) => r.json()).catch(() => null),
+    ]).then(([nombres, husos]) => {
+      if (selPais) {
+        for (const [cc, n] of Object.entries(nombres)) { const o = document.createElement("option"); o.value = cc; o.textContent = n; selPais.append(o); }
+        selPais.onchange = () => { dir.value = ""; lista.replaceChildren(); cambiarPais(selPais.value, true); };
+      }
+      let cc = "AR";
+      if (hayPrevio && previo.cc) cc = previo.cc;
+      else if (husos) { try { cc = husos[Intl.DateTimeFormat().resolvedOptions().timeZone] || "AR"; } catch (e) {} }
+      if (!nombres[cc]) cc = "AR";
+      if (hayPrevio) {
+        if (previo.km) { radio.value = previo.km; kmv.textContent = radio.value; }
+        paisSel = cc; if (selPais) selPais.value = cc;
+        ponerYo(previo.lat, previo.lon, previo.nombre, false, cc);
+        cargarLocalidades().then(pintarSobre);
+      } else {
+        cambiarPais((cfg.foco && cfg.foco.cc && nombres[cfg.foco.cc]) ? cfg.foco.cc : cc, !cfg.foco);
+        if (cfg.foco) encuadrarCirculo(cfg.foco, 250, 0.2); // página de una ciudad: arranca mirando ahí
+        armarCalendario();
+      }
+    });
 
-    return { ponerYo, pais, elegirPorNombre: (q) => cargarLocalidades().then(() => { dir.value = q; const r = sugerir(); if (r[0]) elegir(r[0]); return r[0] || null; }) };
+    return { ponerYo, pais, cambiarPais, elegirPorNombre: (q, cc) => (cc && cc !== paisSel ? cambiarPais(cc, false) : cargarLocalidades()).then(() => { dir.value = q; const r = sugerir(); if (r[0]) elegir(r[0]); return r[0] || null; }) };
   };
 })();

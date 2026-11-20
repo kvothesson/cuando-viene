@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS fechas (
   hora TEXT,                  -- HH:MM, hora local del lugar
   lugar TEXT, ciudad TEXT, pais TEXT,
   lat REAL, lon REAL,
+  tz TEXT,                    -- huso horario del lugar, por ejemplo Europe/Madrid
   link TEXT,
   agotado INTEGER DEFAULT 0,
   fuentes TEXT,               -- pogo, oficial o pogo+oficial

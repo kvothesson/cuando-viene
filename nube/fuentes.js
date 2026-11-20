@@ -73,29 +73,70 @@ export function leerAgenda(html, hoy) {
   return out;
 }
 
-// Ciudades de afuera donde suelen girar: la agenda oficial no trae coordenadas
-const AFUERA = {
-  montevideo: ["UY", -34.9, -56.16], "punta del este": ["UY", -34.96, -54.95], lima: ["PE", -12.05, -77.04],
-  "santiago de chile": ["CL", -33.45, -70.67], santiago: ["CL", -33.45, -70.67], bogota: ["CO", 4.71, -74.07],
-  medellin: ["CO", 6.25, -75.56], madrid: ["ES", 40.42, -3.7], barcelona: ["ES", 41.39, 2.17], valencia: ["ES", 39.47, -0.38],
-  "ciudad de mexico": ["MX", 19.43, -99.13], cdmx: ["MX", 19.43, -99.13], monterrey: ["MX", 25.69, -100.32],
-  guadalajara: ["MX", 20.66, -103.35], asuncion: ["PY", -25.28, -57.63], quito: ["EC", -0.18, -78.47],
-  guayaquil: ["EC", -2.17, -79.92], "la paz": ["BO", -16.5, -68.15], "santa cruz de la sierra": ["BO", -17.78, -63.18],
-  miami: ["US", 25.76, -80.19], "san jose": ["CR", 9.93, -84.08], "buenos aires": ["AR", -34.6, -58.38], caba: ["AR", -34.6, -58.38],
-  "capital federal": ["AR", -34.6, -58.38],
-};
+// Formas de decirle a una ciudad que no figuran en ninguna base
+const APODOS = { caba: "buenos aires", "capital federal": "buenos aires", "ciudad de buenos aires": "buenos aires", "ciudad autonoma de buenos aires": "buenos aires" };
+// Terminaciones de dos letras que no dicen de qué país es un sitio
+const SIN_PAIS = new Set(["CO", "FM", "TV", "IO", "ME", "AI", "LY", "GG", "TO", "CC", "WS", "NU", "EU"]);
+function paisDelLink(link) {
+  try {
+    const t = new URL(link).hostname.split(".").pop().toUpperCase();
+    return t.length === 2 && !SIN_PAIS.has(t) ? (t === "UK" ? "GB" : t) : "";
+  } catch { return ""; }
+}
 
-// Le pone coordenadas a un evento que solo trae el nombre de la ciudad.
-// loc = contenido de datos/localidades.json
-export function ubicar(ev, loc) {
-  if (ev.lat != null && ev.lon != null) return ev;
-  const k = sinTildes(ev.ciudad);
-  if (AFUERA[k]) { [ev.pais, ev.lat, ev.lon] = AFUERA[k]; return ev; }
-  const cand = loc.localidades.filter((l) => sinTildes(l[0]) === k);
-  if (cand.length) {
-    const l = cand.find((c) => sinTildes(c[1]) === k) || cand[0]; // primero la que da nombre a su partido
-    ev.pais = "AR"; ev.lat = l[3]; ev.lon = l[4];
+// Índice de ciudades del mundo por nombre (y por sus otros nombres). Ya vienen de mayor a menor población.
+// mundo = contenido de nube/ciudades.json: { husos: [...], ciudades: [[nombre, país, lat, lon, huso, población, otros?]] }
+let indice = null;
+function ciudadesPorNombre(mundo) {
+  if (indice) return indice;
+  indice = new Map();
+  for (const c of mundo.ciudades) for (const n of [c[0], ...(c[6] || [])]) {
+    const k = sinTildes(n), l = indice.get(k);
+    if (l) { if (!l.includes(c)) l.push(c); } else indice.set(k, [c]);
   }
+  return indice;
+}
+function husoCercano(p, mundo) {
+  let mejor = null, dm = Infinity;
+  for (const c of mundo.ciudades) {
+    const d = (c[2] - p.lat) ** 2 + ((c[3] - p.lon) * Math.cos((p.lat * Math.PI) / 180)) ** 2;
+    if (d < dm) { dm = d; mejor = c; }
+  }
+  return mejor ? mundo.husos[mejor[4]] : "";
+}
+
+// Le pone coordenadas, país y huso horario a un evento que solo trae el nombre de la ciudad.
+// loc = datos/localidades.json (Argentina, hasta el pueblo) · mundo = nube/ciudades.json · base = país del artista
+// Cuando el nombre se repite en varios países decide, en orden: el país del link de entradas,
+// el país del artista y, si no, la ciudad más grande.
+export function ubicar(ev, loc, mundo, base) {
+  if (ev.lat != null && ev.lon != null) {
+    if (!ev.tz && mundo) ev.tz = husoCercano(ev, mundo);
+    return ev;
+  }
+  let k = sinTildes(ev.ciudad);
+  k = APODOS[k] || k;
+  const cand = (mundo && ciudadesPorNombre(mundo).get(k)) || [];
+  const pista = paisDelLink(ev.link);
+  const pueblo = () => {
+    const l = loc.localidades.filter((x) => sinTildes(x[0]) === k);
+    return l.find((x) => sinTildes(x[1]) === k) || l[0]; // primero la que da nombre a su partido
+  };
+  let c = pista && cand.find((x) => x[1] === pista);
+  if (!c && (pista === "AR" || (!pista && base === "AR")) && !cand.some((x) => x[1] === "AR")) {
+    const l = pueblo();
+    if (l) { ev.pais = "AR"; ev.lat = l[3]; ev.lon = l[4]; ev.tz = "America/Argentina/Buenos_Aires"; return ev; }
+  }
+  const porLink = !!c;
+  c = c || (base && cand.find((x) => x[1] === base)) || cand[0];
+  if (c) {
+    ev.pais = c[1]; ev.lat = c[2]; ev.lon = c[3]; ev.tz = mundo.husos[c[4]];
+    // Sin link que lo confirme y con otra ciudad parecida en tamaño en otro país: unir() lo revisa con la gira
+    if (!porLink && cand.some((x) => x[1] !== c[1] && x[5] * 8 >= c[5])) ev._otras = cand;
+    return ev;
+  }
+  const l = pueblo();
+  if (l) { ev.pais = "AR"; ev.lat = l[3]; ev.lon = l[4]; ev.tz = "America/Argentina/Buenos_Aires"; }
   return ev;
 }
 
@@ -108,10 +149,10 @@ export function mismo(a, b) {
 }
 
 // Junta las fuentes. Pogo pone el teatro exacto; la oficial manda en horario y agotado.
-export function unir(pogo, oficial, loc) {
+export function unir(pogo, oficial, loc, mundo, base) {
   const res = pogo.map((e) => ({ ...e }));
   for (const o of oficial) {
-    ubicar(o, loc);
+    ubicar(o, loc, mundo, base);
     const p = res.find((e) => mismo(e, o));
     if (!p) { res.push({ ...o }); continue; }
     if (o.hora) p.hora = o.hora;
@@ -121,6 +162,18 @@ export function unir(pogo, oficial, loc) {
     p.agotado = o.agotado; // la oficial sabe mejor
     p.fuentes = [...new Set([...p.fuentes, ...o.fuentes])];
   }
-  for (const e of res) ubicar(e, loc);
+  for (const e of res) ubicar(e, loc, mundo, base);
+  // Nombre repetido en varios países (Valencia, Córdoba): gana el país donde está girando esos días
+  const dia = (e) => Date.parse(e.fecha + "T12:00:00Z") / 86400e3;
+  for (const e of res) {
+    if (!e._otras) continue;
+    const vecinas = res.filter((x) => x !== e && !x._otras && x.pais && Math.abs(dia(x) - dia(e)) <= 10 && e._otras.some((c) => c[1] === x.pais))
+      .sort((a, b) => Math.abs(dia(a) - dia(e)) - Math.abs(dia(b) - dia(e)));
+    if (vecinas[0] && vecinas[0].pais !== e.pais) {
+      const c = e._otras.find((x) => x[1] === vecinas[0].pais);
+      e.pais = c[1]; e.lat = c[2]; e.lon = c[3]; e.tz = mundo.husos[c[4]];
+    }
+  }
+  for (const e of res) delete e._otras;
   return res.sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
 }

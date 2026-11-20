@@ -8,9 +8,10 @@ Páginas de fans, no oficiales. Sin cuenta, sin mail y sin guardar direcciones: 
 ## Cómo está armado
 
 - `artistas.json`: un artista por entrada (nombre, tipo, color y de dónde se leen sus fechas).
-- `plantilla.html` + `motor/`: la página y el mapa, dibujado por código con límites oficiales de datos.gob.ar. No usa servicios de mapas.
+- `plantilla.html` + `motor/`: la página y el mapa, dibujado por código con datos abiertos. No usa servicios de mapas.
 - `herramientas/armar_paginas.py`: escribe una página por artista con las fechas ya en el HTML. Corre solo una vez por día.
 - `herramientas/armar_datos.py`: achica los datos de provincias, partidos y localidades.
+- `herramientas/armar_mundo.py`: arma el contorno de los países, las ciudades de cada país para el buscador y la lista que usa el robot para ubicar fechas en cualquier lugar.
 - `nube/`: el robot en Cloudflare. Lee las fechas cada 30 minutos, arma el calendario por localidad y manda las notificaciones.
 - `sw.js`: recibe las notificaciones en el navegador.
 
@@ -20,3 +21,9 @@ Páginas de fans, no oficiales. Sin cuenta, sin mail y sin guardar direcciones: 
 2. Si su página oficial tiene un formato nuevo, escribirle un lector en `nube/fuentes.js`.
 3. `cd nube && npx cf deploy --secrets-file .secretos.json`
 4. `python herramientas/armar_paginas.py`
+
+## Datos
+
+- Argentina (provincias, partidos y localidades): datos.gob.ar.
+- Países: Natural Earth, dominio público.
+- Ciudades del mundo: [GeoNames](https://www.geonames.org/), CC BY 4.0.

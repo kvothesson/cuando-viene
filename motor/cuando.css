@@ -90,3 +90,7 @@ footer a{color:var(--suave)}
 .tarjeta b{display:block;font-family:var(--titulo);font-weight:400;font-size:22px;color:var(--texto)}
 .tarjeta span{color:var(--suave);font-size:14px}
 .tarjeta:hover{border-color:var(--acento)}
+
+/* el resto del mundo y el selector de país */
+.mundo{fill:#25201b;stroke:var(--suave);stroke-width:.7;stroke-opacity:.5;stroke-linejoin:round}
+select{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--linea);background:var(--fondo);color:var(--texto);font:inherit;margin-bottom:8px}
