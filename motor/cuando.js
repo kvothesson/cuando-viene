@@ -496,10 +496,16 @@
         const d = await r.json();
         if (!r.ok || !d.link) throw new Error("pedido " + r.status);
         medir("telegram", yo.nombre);
-        msg.replaceChildren("Se abre Telegram: tocá “Iniciar” y listo. Si no se abrió, ");
-        const a = html("a", "", "abrilo desde acá"); a.href = d.link; a.target = "_blank"; a.rel = "noopener";
-        msg.append(a, ".");
-        location.href = d.link;
+        // En el celular se abre la app. En la compu esa página solo sabe abrir la app de escritorio,
+        // así que se ofrecen las tres salidas: la app, Telegram Web o pegarle el código al bot.
+        const codigo = d.link.split("start=")[1], bot = d.link.split("t.me/")[1].split("?")[0];
+        const web = "https://web.telegram.org/k/#?tgaddr=" + encodeURIComponent(`tg://resolve?domain=${bot}&start=${codigo}`);
+        const enlace = (texto, href) => { const a = html("a", "", texto); a.href = href; a.target = "_blank"; a.rel = "noopener"; return a; };
+        const orden = html("code", "", "/start " + codigo);
+        const celu = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        msg.replaceChildren(celu ? "Se abre Telegram: tocá “Iniciar”. Si no se abrió: " : "Elegí cómo abrirlo y tocá “Iniciar”: ",
+          enlace("Telegram Web", web), " · ", enlace("la app", d.link), ". O mandale al bot @" + bot + " este mensaje: ", orden);
+        if (celu) location.href = d.link; else msg.querySelector("a").focus();
       } catch (e) { msg.textContent = "No pude armar el enlace de Telegram. Probá de nuevo en un rato."; }
     };
     // ¿Este dispositivo ya está anotado? Entonces se puede actualizar o dar de baja.

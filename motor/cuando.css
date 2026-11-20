@@ -216,3 +216,5 @@ button.fuerte:focus-visible,#suscribir:focus-visible,.marquesina:focus-visible,.
 .avisar .dos button[hidden]{display:none}
 .avisar #telegram{padding:13px 14px;font-size:15px;white-space:nowrap}
 .avisar .nota a{color:var(--acento)}
+
+.avisar .nota code{font-family:ui-monospace,Consolas,monospace;color:var(--texto);background:var(--fondo);border:1px solid var(--linea);border-radius:4px;padding:1px 5px;user-select:all;overflow-wrap:anywhere}
