@@ -12,10 +12,10 @@ self.addEventListener("push", (e) => e.waitUntil((async () => {
   } catch (err) {}
   if (!ms.length) ms = [{ titulo: "🎟 Hay una fecha nueva cerca tuyo", cuerpo: "Tocá para verla.", url: ACA, mapa: ACA }];
   for (const m of ms) {
-    const base = { body: m.cuerpo, icon: ACA + "motor/icono.png", data: { url: m.url, mapa: m.mapa || ACA } };
+    const base = { body: m.cuerpo, icon: ACA + "motor/icono.png?v=2", data: { url: m.url, mapa: m.mapa || ACA } };
     try {
       await self.registration.showNotification(m.titulo, Object.assign({}, base, {
-        badge: ACA + "motor/insignia.png",   // lo que queda en la barra del celular
+        badge: ACA + "motor/insignia.png?v=2",   // lo que queda en la barra del celular
         image: m.imagen || undefined,        // la tarjeta del artista, en grande donde el sistema la muestra
         requireInteraction: true,            // no se va sola: queda hasta que la tocás o la cerrás
         vibrate: [200, 100, 200, 100, 400],
