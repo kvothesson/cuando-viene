@@ -218,3 +218,6 @@ button.fuerte:focus-visible,#suscribir:focus-visible,.marquesina:focus-visible,.
 .avisar .nota a{color:var(--acento)}
 
 .avisar .nota code{font-family:ui-monospace,Consolas,monospace;color:var(--texto);background:var(--fondo);border:1px solid var(--linea);border-radius:4px;padding:1px 5px;user-select:all;overflow-wrap:anywhere}
+
+.avisar .nota .enlaces{display:flex;margin-top:8px}
+.avisar .nota .enlaces a{color:var(--texto);padding:11px 10px;min-height:44px}

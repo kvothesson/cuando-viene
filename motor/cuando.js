@@ -478,7 +478,7 @@
         const r = await fetch(cfg.api + "/push/alta", { method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sub: sub.toJSON(), artista: cfg.artista, lat: yo.lat, lon: yo.lon, km: +radio.value, loc: yo.nombre }) });
         if (!r.ok) throw new Error("alta " + r.status);
-        msg.textContent = `Listo. Te aviso en este dispositivo cuando haya una fecha a menos de ${radio.value} km de ${yo.nombre}.`;
+        msg.textContent = `Listo. Te llega una notificación en ${aparato} cuando haya una fecha a menos de ${radio.value} km de ${yo.nombre}. Si cambiás la ciudad o el radio, tocá el botón de nuevo.`;
         try { localStorage.setItem("cuandoviene-aviso-" + cfg.artista, "1"); } catch (e) {}
         estadoAviso(true);
         medir("aviso", yo.nombre);
@@ -501,15 +501,28 @@
         const codigo = d.link.split("start=")[1], bot = d.link.split("t.me/")[1].split("?")[0];
         const web = "https://web.telegram.org/k/#?tgaddr=" + encodeURIComponent(`tg://resolve?domain=${bot}&start=${codigo}`);
         const enlace = (texto, href) => { const a = html("a", "", texto); a.href = href; a.target = "_blank"; a.rel = "noopener"; return a; };
-        const orden = html("code", "", "/start " + codigo);
         const celu = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        msg.replaceChildren(celu ? "Se abre Telegram: tocá “Iniciar”. Si no se abrió: " : "Elegí cómo abrirlo y tocá “Iniciar”: ",
-          enlace("Telegram Web", web), " · ", enlace("la app", d.link), ". O mandale al bot @" + bot + " este mensaje: ", orden);
-        if (celu) location.href = d.link; else msg.querySelector("a").focus();
+        if (celu) { // se abre la app sola
+          msg.replaceChildren("Se abre Telegram: tocá “Iniciar” y listo. ", enlace("Abrir de nuevo", d.link));
+          location.href = d.link;
+        } else { // en la compu: dos botones, según cómo uses Telegram
+          const fila = html("span", "enlaces");
+          fila.append(enlace("Abrir Telegram Web", web), enlace("Tengo la app instalada", d.link));
+          msg.replaceChildren("Último paso: abrí Telegram y tocá “Iniciar”.", fila);
+          fila.firstChild.focus();
+        }
       } catch (e) { msg.textContent = "No pude armar el enlace de Telegram. Probá de nuevo en un rato."; }
     };
     // ¿Este dispositivo ya está anotado? Entonces se puede actualizar o dar de baja.
-    function estadoAviso(on) { $("suscribir").textContent = on ? "Actualizar mi aviso" : "Avisame si viene cerca"; if ($("baja")) $("baja").hidden = !on; }
+    // Cada botón dice por dónde llega el aviso: este aparato, o Telegram
+    const aparato = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? "este celular" : "esta compu";
+    function estadoAviso(on) {
+      const b = $("suscribir"), baja = $("baja");
+      b.textContent = on ? "✓ Activo en " + aparato : "Avisame en " + aparato;
+      b.setAttribute("aria-label", on ? `El aviso está activo en ${aparato}. Tocá para actualizar la ciudad y el radio` : `Avisame con una notificación en ${aparato}`);
+      if (baja) { baja.hidden = !on; baja.textContent = "Dejar de avisarme en " + aparato; }
+    }
+    estadoAviso(false);
     async function miCasilla() {
       try { const reg = await navigator.serviceWorker.getRegistration(new URL(base, location.href).href); return reg ? await reg.pushManager.getSubscription() : null; } catch (e) { return null; }
     }
@@ -521,7 +534,7 @@
       if (s && cfg.api) await fetch(cfg.api + "/push/baja", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint: s.endpoint, artista: cfg.artista }) }).catch(() => {});
       try { localStorage.removeItem("cuandoviene-aviso-" + cfg.artista); } catch (e) {}
       estadoAviso(false);
-      $("msg").textContent = "Listo. Ya no te aviso en este dispositivo.";
+      $("msg").textContent = "Listo. Ya no te aviso en " + aparato + ".";
       $("suscribir").focus();
     };
 
