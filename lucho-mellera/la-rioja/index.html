@@ -17,11 +17,12 @@
 <link rel="icon" type="image/png" href="../../motor/icono.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../motor/cuando.css?v=511d4b4d">
+<link rel="stylesheet" href="../../motor/cuando.css?v=a9cea625">
 <style>:root{ --acento:#ffcc33; }</style>
 <script type="application/ld+json">[{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Cuándo viene", "item": "https://kvothesson.com/cuando-viene/"}, {"@type": "ListItem", "position": 2, "name": "Lucho Mellera", "item": "https://kvothesson.com/cuando-viene/lucho-mellera/"}, {"@type": "ListItem", "position": 3, "name": "Argentina", "item": "https://kvothesson.com/cuando-viene/lucho-mellera/argentina/"}, {"@type": "ListItem", "position": 4, "name": "La Rioja", "item": "https://kvothesson.com/cuando-viene/lucho-mellera/la-rioja/"}]}]</script>
 </head>
 <body>
+<a class="salto" href="#tablero">Saltar a elegir ciudad y ver fechas</a>
 <div class="pantalla">
 <header>
   <nav class="migas" aria-label="Estás en"><a href="https://kvothesson.com/cuando-viene/">Cuándo viene</a> › <a href="https://kvothesson.com/cuando-viene/lucho-mellera/">Lucho Mellera</a> › <a href="https://kvothesson.com/cuando-viene/lucho-mellera/argentina/">Argentina</a> › <span>La Rioja</span></nav>
@@ -29,17 +30,22 @@
   <p class="bajada">Elegí tu ciudad y a cuántos km irías: te avisamos apenas aparezca una función cerca. Gratis y sin cuenta.</p>
 </header>
 
-<main class="tablero">
+<main class="tablero" id="tablero">
   <div class="elige">
-    <select id="pais" aria-label="País"></select>
+    <label class="oculto" for="pais">País</label>
+    <select id="pais"></select>
     <div class="busca">
-      <input id="dir" type="text" placeholder="Tu ciudad o localidad" autocomplete="off" aria-label="Tu ciudad o localidad">
-      <div id="sugerencias"></div>
+      <label class="oculto" for="dir">Tu ciudad o localidad</label>
+      <input id="dir" type="text" placeholder="Tu ciudad o localidad" autocomplete="off" spellcheck="false" enterkeyhint="search"
+        role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="sugerencias">
+      <div id="sugerencias" role="listbox" aria-label="Ciudades sugeridas"></div>
+      <p id="sug-estado" class="oculto" role="status"></p>
     </div>
   </div>
 
   <div class="lienzo">
-    <svg id="mapa" role="application" aria-label="Mapa con las próximas fechas de Lucho Mellera"></svg>
+    <svg id="mapa" role="application" tabindex="0" aria-label="Mapa con las próximas fechas de Lucho Mellera" aria-describedby="mapa-ayuda"></svg>
+    <p id="mapa-ayuda" class="oculto">El mapa es un apoyo visual: todo se puede hacer con el buscador de ciudad y la lista de fechas. Con el teclado, las flechas lo mueven y las teclas más y menos lo acercan o alejan.</p>
     <div class="botones">
       <button id="mas" type="button" aria-label="Acercar">+</button>
       <button id="menos" type="button" aria-label="Alejar">−</button>
@@ -49,18 +55,22 @@
   </div>
 
   <div class="radio-fila">
-    <label for="radio">Hasta</label>
-    <b class="km"><span id="kmv">50</span> km</b>
-    <input id="radio" type="range" min="10" max="500" step="5" value="50">
+    <label for="kmn">Hasta</label>
+    <button id="km-menos" type="button" aria-label="Achicar el radio">−</button>
+    <input id="kmn" type="number" inputmode="numeric" min="10" max="500" step="5" value="50" aria-describedby="km-unidad">
+    <span id="km-unidad" class="km">km</span>
+    <button id="km-mas" type="button" aria-label="Agrandar el radio">+</button>
+    <input id="radio" type="range" min="10" max="500" step="1" value="50" aria-label="Radio en kilómetros, con barra">
   </div>
 
   <div class="lista">
     <h2>Próximas fechas <span id="donde" aria-live="polite"></span></h2>
-    <div id="fechas"><div class="fecha"><div class="dia"><b>21</b><small>nov</small></div><div><div class="lugar">Estadio Ruca Che <span class="sello">Agotado</span></div><div class="meta">Neuquén · 21:00 h</div><a href="https://www.entradauno.com/landing/el-unipersonal-de-lucho-mellera" target="_blank" rel="noopener">Ver igual →</a></div></div><div class="fecha"><div class="dia"><b>12</b><small>dic</small></div><div><div class="lugar">Teatro Argentino de La Plata <span class="sello">Agotado</span></div><div class="meta">La Plata · 21:00 h</div><a href="https://livepass.com.ar/events/el-unipersonal-de-lucho-mellera-en-la-sala-ginastera-teatro-argentino-la-plata" target="_blank" rel="noopener">Ver igual →</a></div></div><div class="fecha"><div class="dia"><b>25</b><small>feb</small></div><div><div class="lugar">Teatro Peruano Japonés <span class="sello">Agotado</span></div><div class="meta">Lima · 20:00 h</div><a href="https://teleticket.com.pe/evento/el-unipersonal-de-lucho-mellera-teatro-peruano-japones" target="_blank" rel="noopener">Ver igual →</a></div></div><div class="fecha"><div class="dia"><b>26</b><small>feb</small></div><div><div class="lugar">Teatro Peruano Japonés <span class="sello">Agotado</span></div><div class="meta">Lima · 20:00 h</div><a href="https://teleticket.com.pe/evento/el-unipersonal-de-lucho-mellera-teatro-peruano-japones" target="_blank" rel="noopener">Ver igual →</a></div></div><div class="fecha"><div class="dia"><b>27</b><small>feb</small></div><div><div class="lugar">Teatro Peruano Japonés <span class="sello">Agotado</span></div><div class="meta">Lima · 20:00 h</div><a href="https://teleticket.com.pe/evento/el-unipersonal-de-lucho-mellera-teatro-peruano-japones" target="_blank" rel="noopener">Ver igual →</a></div></div><div class="fecha"><div class="dia"><b>11</b><small>abr</small></div><div><div class="lugar">Movistar Arena</div><div class="meta">Santiago de Chile · 20:30 h</div><a href="https://www.puntoticket.com/lucho-mellera" target="_blank" rel="noopener">Entradas →</a></div></div><div class="fecha"><div class="dia"><b>24</b><small>may</small></div><div><div class="lugar">Movistar Arena</div><div class="meta">Madrid · 20:30 h</div><a href="https://tickets.baila.fm/el-unipersonal-de-lucho-mellera-en-madrid-2027" target="_blank" rel="noopener">Entradas →</a></div></div><div class="fecha"><div class="dia"><b>20</b><small>ago</small></div><div><div class="lugar">Movistar Arena</div><div class="meta">Bogotá · 20:00 h</div><a href="https://www.tuboleta.com/es/eventos/el-unipersonal-de-luciano-mellera" target="_blank" rel="noopener">Entradas →</a></div></div></div>
+    <div id="fechas" role="list" aria-label="Próximas fechas" tabindex="0"><div class="fecha" role="listitem"><time class="dia" datetime="2026-11-21"><b>21</b><small>nov</small></time><div><div class="lugar">Estadio Ruca Che <span class="sello">Agotado</span></div><div class="meta">Neuquén · 21:00 h</div><a href="https://www.entradauno.com/landing/el-unipersonal-de-lucho-mellera" target="_blank" rel="noopener">Ver igual →</a></div></div><div class="fecha" role="listitem"><time class="dia" datetime="2026-12-12"><b>12</b><small>dic</small></time><div><div class="lugar">Teatro Argentino de La Plata <span class="sello">Agotado</span></div><div class="meta">La Plata · 21:00 h</div><a href="https://livepass.com.ar/events/el-unipersonal-de-lucho-mellera-en-la-sala-ginastera-teatro-argentino-la-plata" target="_blank" rel="noopener">Ver igual →</a></div></div><div class="fecha" role="listitem"><time class="dia" datetime="2027-02-25"><b>25</b><small>feb</small></time><div><div class="lugar">Teatro Peruano Japonés <span class="sello">Agotado</span></div><div class="meta">Lima · 20:00 h</div><a href="https://teleticket.com.pe/evento/el-unipersonal-de-lucho-mellera-teatro-peruano-japones" target="_blank" rel="noopener">Ver igual →</a></div></div><div class="fecha" role="listitem"><time class="dia" datetime="2027-02-26"><b>26</b><small>feb</small></time><div><div class="lugar">Teatro Peruano Japonés <span class="sello">Agotado</span></div><div class="meta">Lima · 20:00 h</div><a href="https://teleticket.com.pe/evento/el-unipersonal-de-lucho-mellera-teatro-peruano-japones" target="_blank" rel="noopener">Ver igual →</a></div></div><div class="fecha" role="listitem"><time class="dia" datetime="2027-02-27"><b>27</b><small>feb</small></time><div><div class="lugar">Teatro Peruano Japonés <span class="sello">Agotado</span></div><div class="meta">Lima · 20:00 h</div><a href="https://teleticket.com.pe/evento/el-unipersonal-de-lucho-mellera-teatro-peruano-japones" target="_blank" rel="noopener">Ver igual →</a></div></div><div class="fecha" role="listitem"><time class="dia" datetime="2027-04-11"><b>11</b><small>abr</small></time><div><div class="lugar">Movistar Arena</div><div class="meta">Santiago de Chile · 20:30 h</div><a href="https://www.puntoticket.com/lucho-mellera" target="_blank" rel="noopener">Entradas →</a></div></div><div class="fecha" role="listitem"><time class="dia" datetime="2027-05-24"><b>24</b><small>may</small></time><div><div class="lugar">Movistar Arena</div><div class="meta">Madrid · 20:30 h</div><a href="https://tickets.baila.fm/el-unipersonal-de-lucho-mellera-en-madrid-2027" target="_blank" rel="noopener">Entradas →</a></div></div><div class="fecha" role="listitem"><time class="dia" datetime="2027-08-20"><b>20</b><small>ago</small></time><div><div class="lugar">Movistar Arena</div><div class="meta">Bogotá · 20:00 h</div><a href="https://www.tuboleta.com/es/eventos/el-unipersonal-de-luciano-mellera" target="_blank" rel="noopener">Entradas →</a></div></div></div>
   </div>
 
   <div class="avisar">
     <button id="suscribir" type="button">Avisame si viene cerca</button>
+    <button id="baja" type="button" class="sec" hidden>Dejar de avisarme</button>
     <p id="msg" class="nota" aria-live="polite"></p>
   </div>
 </main>
@@ -80,7 +90,7 @@
   · <a href="../../">Más artistas</a> · <a href="https://kvothesson.com/">kvothesson.com</a>
 </footer>
 
-<script src="../../motor/cuando.js?v=511d4b4d"></script>
+<script src="../../motor/cuando.js?v=a9cea625"></script>
 <script>
 window.app = CuandoViene({
   base: "../../",

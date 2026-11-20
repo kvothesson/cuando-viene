@@ -105,7 +105,7 @@ def fechas_html(fechas):
         sello = ' <span class="sello">Agotado</span>' if f["agotado"] else ""
         extra = "".join(f" · {x}" for x in [f"{f['hora']} h" if f.get("hora") else "", precio_txt(f)] if x)
         link = f'<a href="{e(f["link"])}" target="_blank" rel="noopener">{"Ver igual" if f["agotado"] else "Entradas"} →</a>' if f.get("link") else ""
-        out.append(f'<div class="fecha"><div class="dia"><b>{int(d)}</b><small>{MESES[int(m) - 1]}</small></div>'
+        out.append(f'<div class="fecha" role="listitem"><time class="dia" datetime="{f["fecha"]}"><b>{int(d)}</b><small>{MESES[int(m) - 1]}</small></time>'
                    f'<div><div class="lugar">{e(f.get("lugar") or f["ciudad"])}{sello}</div>'
                    f'<div class="meta">{e(f["ciudad"])}{extra}</div>{link}</div></div>')
     return "".join(out)

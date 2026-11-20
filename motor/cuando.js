@@ -63,7 +63,9 @@
       try { fetch(cfg.api + "/evento", { method: "POST", keepalive: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ a: cfg.artista, ev, k: k || "" }) }).catch(() => {}); } catch (e) {}
     }
     medir("visita", "", true);
-    const svg = $("mapa"), radio = $("radio"), kmv = $("kmv");
+    const svg = $("mapa"), radio = $("radio"), kmn = $("kmn");
+    const MESES_LARGO = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+    const ponerKm = () => { kmn.value = radio.value; radio.setAttribute("aria-valuetext", radio.value + " kilómetros"); };
     const gMundo = el("g"), gTierra = el("g"), gSobre = el("g");
     svg.append(gMundo, gTierra, gSobre);
 
@@ -239,15 +241,20 @@
       for (const f of orden) {
         const [, m, d] = f.fecha.split("-");
         const fila = html("div", cerca(f) === 0 ? "fecha cercana" : "fecha");
-        if (f.lat != null) fila.addEventListener("click", (e) => {
-          if (e.target.closest("a")) return;
+        fila.setAttribute("role", "listitem");
+        const irA = () => {
           encuadrarCirculo(f, 45, 0.2); // el mapa va a donde es la función
           // y se ven los nombres de las ciudades de ese país
           const pc = f.pais || paisEn(f.lat, f.lon);
           if (pc && pc !== paisSel && !yo) { paisSel = pc; localidades = null; if (selPais) selPais.value = pc; cargarLocalidades().then(pintarSobre); }
-        });
-        const dia = html("div", "dia");
-        dia.append(html("b", "", String(+d)), html("small", "", MESES[m - 1]));
+        };
+        if (f.lat != null) fila.addEventListener("click", (e) => { if (!e.target.closest("a,button")) irA(); });
+        const diaLargo = `${+d} de ${MESES_LARGO[m - 1]} de ${f.fecha.slice(0, 4)}`;
+        const dia = html("time", "dia");
+        dia.dateTime = f.fecha;
+        const dN = html("b", "", String(+d)), dM = html("small", "", MESES[m - 1]);
+        dN.setAttribute("aria-hidden", "true"); dM.setAttribute("aria-hidden", "true");
+        dia.append(dN, dM, html("span", "oculto", diaLargo));
         const info = html("div");
         const desde = f.precio && !f.agotado ? " · desde " + (!f.moneda || f.moneda === "ARS" ? "$ " : "") + Math.round(f.precio).toLocaleString("es-AR") + (f.moneda && f.moneda !== "ARS" ? " " + f.moneda : "") : "";
         const meta = html("div", "meta", f.ciudad + (f.hora ? " · " + f.hora + " h" : "") + desde);
@@ -257,12 +264,21 @@
         }
         const lugar = html("div", "lugar", f.lugar || f.ciudad);
         if (f.agotado) lugar.append(" ", html("span", "sello", "Agotado"));
-        info.append(lugar, meta);
+        const acciones = html("div", "acciones");
+        info.append(lugar, meta, acciones);
         if (f.link) {
           const link = html("a", "", f.agotado ? "Ver igual →" : "Entradas →");
           link.href = f.link; link.target = "_blank"; link.rel = "noopener";
+          link.setAttribute("aria-label", `${f.agotado ? "Ver la venta, figura agotado" : "Entradas"}: ${f.ciudad}, ${diaLargo}. Se abre en otra pestaña`);
           link.addEventListener("click", () => medir("entradas", f.ciudad));
-          info.append(link);
+          acciones.append(link);
+        }
+        if (f.lat != null) {
+          const vm = html("button", "vermapa", "Ver en el mapa");
+          vm.type = "button";
+          vm.setAttribute("aria-label", `Ver ${f.ciudad} en el mapa`);
+          vm.addEventListener("click", irA);
+          acciones.append(vm);
         }
         fila.append(dia, info);
         caja.append(fila);
@@ -292,7 +308,7 @@
       if (!yo) return;
       encuadrarCirculo(yo, +radio.value, 0.25);
     }
-    radio.addEventListener("input", () => { kmv.textContent = radio.value; pintarSobre(); pintarFechas(); armarCalendario(); });
+    radio.addEventListener("input", () => { ponerKm(); pintarSobre(); pintarFechas(); armarCalendario(); });
     radio.addEventListener("change", () => { medir("radio", radio.value <= 30 ? "hasta 30" : radio.value <= 80 ? "31 a 80" : radio.value <= 200 ? "81 a 200" : "más de 200"); encuadrarRadio(); recordar(); });
 
     // ---------- mover el mapa ----------
@@ -337,6 +353,7 @@
 
     // ---------- buscador de localidades ----------
     const dir = $("dir"), lista = $("sugerencias");
+    let opciones = [], activa = -1;
     // Argentina llega hasta el barrio; el resto del mundo, ciudades de más de 15.000 habitantes.
     // Cada país es un archivo aparte: se baja solo el que hace falta.
     function cargarLocalidades() {
@@ -366,7 +383,7 @@
       for (const l of localidades) { const t = tipo(l); if (t) cand.push([t * 10 + (esGrande(l) ? 3 : 1), l]); }
       if (grandes) for (const l of grandes) {
         if (l.cc === paisSel) continue;
-        const t = tipo(l);
+        const t = q.length >= 5 ? tipo(l) : tipo({ k: l.k }); // con pocas letras, solo por su nombre principal
         if (t > 1 || (t === 1 && q.length >= 4)) cand.push([t * 10 + (t === 3 ? 2 : 0.5), l]);
       }
       let res = cand.sort((a, b) => b[0] - a[0]).slice(0, 8).map((x) => x[1]);
@@ -383,17 +400,22 @@
       }
       for (const l of res) {
         const b = html("button", "", l.n);
-        b.type = "button";
+        b.type = "button"; b.tabIndex = -1; b.id = "sug-" + lista.children.length;
+        b.setAttribute("role", "option"); b.setAttribute("aria-selected", "false");
         b.append(html("small", "", " " + [l.dep, l.prov, l.cc !== paisSel ? nombresPais[l.cc] : ""].filter((x) => x && x !== l.n).join(", ")));
         b.onclick = () => elegir(l);
         lista.append(b);
       }
+      opciones = res; activa = -1;
+      dir.setAttribute("aria-expanded", res.length ? "true" : "false");
+      dir.removeAttribute("aria-activedescendant");
+      $("sug-estado").textContent = res.length ? `${res.length} ${res.length === 1 ? "sugerencia" : "sugerencias"}. Flechas para recorrer, Enter para elegir.` : "Sin sugerencias.";
       if (!res.length) lista.append(html("p", "nota", paisSel === "AR" ? "No la encuentro. Escribí tu localidad o barrio, o tocá el mapa." : "No la encuentro. Probá con la ciudad grande más cercana o tocá el mapa."));
       return res;
     }
     function elegir(l, sinEncuadrar) {
       if (l.cc && l.cc !== paisSel) { paisSel = l.cc; localidades = null; if (selPais) selPais.value = l.cc; cargarLocalidades().then(pintarSobre); } // ciudad de otro país: el país cambia solo
-      dir.value = l.n; lista.replaceChildren(); ponerYo(l.lat, l.lon, l.n, sinEncuadrar, l.cc); medir("localidad", l.n + ", " + (l.cc === "AR" ? l.prov || "AR" : l.cc)); }
+      dir.value = l.n; lista.replaceChildren(); opciones = []; activa = -1; dir.setAttribute("aria-expanded", "false"); dir.removeAttribute("aria-activedescendant"); ponerYo(l.lat, l.lon, l.n, sinEncuadrar, l.cc); medir("localidad", l.n + ", " + (l.cc === "AR" ? l.prov || "AR" : l.cc)); }
     // Un toque en el mapa se cambia por la ciudad o localidad más cercana:
     // el punto exacto nunca se guarda ni sale del dispositivo.
     function elegirCercana(lat, lon, sinEncuadrar) {
@@ -416,7 +438,25 @@
     const todo = () => Promise.all([cargarLocalidades(), cargarGrandes()]);
     dir.addEventListener("focus", todo);
     dir.addEventListener("input", () => { cargarLocalidades().then(sugerir); if (!grandes) cargarGrandes().then(sugerir); });
-    dir.addEventListener("keydown", (e) => { if (e.key === "Enter") todo().then(() => { const r = sugerir(); if (r[0]) elegir(r[0]); }); });
+    function cerrarLista() { lista.replaceChildren(); opciones = []; activa = -1; dir.setAttribute("aria-expanded", "false"); dir.removeAttribute("aria-activedescendant"); }
+    function marcar(i) {
+      const bs = lista.querySelectorAll('[role="option"]');
+      if (!bs.length) return;
+      activa = (i + bs.length) % bs.length;
+      bs.forEach((b, k) => b.setAttribute("aria-selected", k === activa ? "true" : "false"));
+      dir.setAttribute("aria-activedescendant", bs[activa].id);
+      bs[activa].scrollIntoView({ block: "nearest" });
+    }
+    dir.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") { e.preventDefault(); if (opciones.length) marcar(activa + 1); else todo().then(sugerir); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); if (opciones.length) marcar(activa - 1); }
+      else if (e.key === "Escape") cerrarLista();
+      else if (e.key === "Enter") {
+        if (activa >= 0 && opciones[activa]) elegir(opciones[activa]);
+        else todo().then(() => { const r = sugerir(); if (r[0]) elegir(r[0]); });
+      }
+    });
+    document.addEventListener("pointerdown", (e) => { if (!e.target.closest(".busca")) cerrarLista(); });
 
     // ---------- aviso en este dispositivo ----------
     function claveBytes(s) {
@@ -425,7 +465,7 @@
     }
     async function avisarAca() {
       const msg = $("msg");
-      if (!yo) { msg.textContent = "Primero elegí tu localidad."; return; }
+      if (!yo) { msg.textContent = "Primero elegí tu ciudad en el buscador de arriba."; dir.focus(); return; }
       if (!cfg.api || !vapid) { msg.textContent = "No pude conectar con el servicio de avisos. Probá en un rato."; return; }
       if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
         msg.textContent = "Este navegador no admite avisos. En iPhone, primero agregá la página a la pantalla de inicio."; return;
@@ -439,11 +479,58 @@
           body: JSON.stringify({ sub: sub.toJSON(), artista: cfg.artista, lat: yo.lat, lon: yo.lon, km: +radio.value, loc: yo.nombre }) });
         if (!r.ok) throw new Error("alta " + r.status);
         msg.textContent = `Listo. Te aviso en este dispositivo cuando haya una fecha a menos de ${radio.value} km de ${yo.nombre}.`;
-        $("suscribir").textContent = "Actualizar mi aviso";
+        try { localStorage.setItem("cuandoviene-aviso-" + cfg.artista, "1"); } catch (e) {}
+        estadoAviso(true);
         medir("aviso", yo.nombre);
       } catch (e) { msg.textContent = "No pude activar el aviso (" + ((e && e.message) || e) + "). Probá de nuevo en un rato."; }
     }
     $("suscribir").onclick = avisarAca;
+    // ¿Este dispositivo ya está anotado? Entonces se puede actualizar o dar de baja.
+    function estadoAviso(on) { $("suscribir").textContent = on ? "Actualizar mi aviso" : "Avisame si viene cerca"; if ($("baja")) $("baja").hidden = !on; }
+    async function miCasilla() {
+      try { const reg = await navigator.serviceWorker.getRegistration(new URL(base, location.href).href); return reg ? await reg.pushManager.getSubscription() : null; } catch (e) { return null; }
+    }
+    let anotado = false;
+    try { anotado = localStorage.getItem("cuandoviene-aviso-" + cfg.artista) === "1"; } catch (e) {}
+    if (anotado && "serviceWorker" in navigator) miCasilla().then((s) => { if (s) estadoAviso(true); });
+    if ($("baja")) $("baja").onclick = async () => {
+      const s = await miCasilla();
+      if (s && cfg.api) await fetch(cfg.api + "/push/baja", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint: s.endpoint, artista: cfg.artista }) }).catch(() => {});
+      try { localStorage.removeItem("cuandoviene-aviso-" + cfg.artista); } catch (e) {}
+      estadoAviso(false);
+      $("msg").textContent = "Listo. Ya no te aviso en este dispositivo.";
+      $("suscribir").focus();
+    };
+
+    // ---------- radio: botones, número escrito o barra ----------
+    const acotar = (v) => Math.min(500, Math.max(10, Math.round(v) || 10));
+    function fijarKm(v) { radio.value = acotar(v); radio.dispatchEvent(new Event("input")); radio.dispatchEvent(new Event("change")); }
+    // pasos más largos a medida que el radio crece, así no hay que tocar cien veces
+    const salto = (v, sube) => { const p = (sube ? v : v - 1) < 50 ? 5 : (sube ? v : v - 1) < 100 ? 10 : (sube ? v : v - 1) < 250 ? 25 : 50; return sube ? Math.floor(v / p) * p + p : Math.ceil(v / p) * p - p; };
+    function boton(id, sube) {
+      const b = $(id); if (!b) return;
+      let t = null, r = null;
+      const uno = () => fijarKm(salto(+radio.value, sube));
+      const soltar = () => { clearTimeout(t); clearInterval(r); t = r = null; };
+      b.addEventListener("click", (e) => { if (e.detail === 0) uno(); }); // teclado y lectores de pantalla
+      b.addEventListener("pointerdown", (e) => { e.preventDefault(); b.focus(); uno(); t = setTimeout(() => { r = setInterval(uno, 110); }, 450); }); // mantener apretado repite
+      ["pointerup", "pointerleave", "pointercancel", "blur"].forEach((ev) => b.addEventListener(ev, soltar));
+    }
+    boton("km-menos", false); boton("km-mas", true);
+    kmn.addEventListener("change", () => fijarKm(+kmn.value));
+    kmn.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); fijarKm(+kmn.value); kmn.blur(); } });
+
+    // ---------- mapa con teclado ----------
+    svg.addEventListener("keydown", (e) => {
+      const paso = vista.w * 0.12;
+      if (e.key === "ArrowLeft") vista.cx -= paso; else if (e.key === "ArrowRight") vista.cx += paso;
+      else if (e.key === "ArrowUp") vista.cy -= paso; else if (e.key === "ArrowDown") vista.cy += paso;
+      else if (e.key === "+" || e.key === "=") { e.preventDefault(); return zoom(0.6); }
+      else if (e.key === "-" || e.key === "_") { e.preventDefault(); return zoom(1 / 0.6); }
+      else if (e.key === "Home" || e.key === "0") { e.preventDefault(); return pais(); }
+      else return;
+      e.preventDefault(); aplicar();
+    });
 
     // ---------- fechas al día, desde el robot ----------
     if (cfg.api) fetch(cfg.api + "/fechas/" + cfg.artista).then((r) => r.json()).then((d) => {
@@ -457,7 +544,8 @@
     // Si no, vale lo último que elegiste. Y si es tu primera vez, el país se adivina por el
     // huso horario del navegador: no se consulta ningún servicio ni se rastrea a nadie.
     const previo = leer() || {};
-    if (previo.km) { radio.value = previo.km; kmv.textContent = radio.value; }
+    if (previo.km) radio.value = previo.km;
+    ponerKm();
     pintarFechas();
     Promise.all([
       fetch(base + "datos/paises.json").then((r) => r.json()).catch(() => ({ AR: "Argentina" })),

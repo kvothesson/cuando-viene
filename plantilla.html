@@ -21,6 +21,7 @@
 <script type="application/ld+json">{{JSONLD}}</script>
 </head>
 <body>
+<a class="salto" href="#tablero">Saltar a elegir ciudad y ver fechas</a>
 <div class="pantalla">
 <header>
   {{MIGAS}}
@@ -28,17 +29,22 @@
   <p class="bajada">Elegí tu ciudad y a cuántos km irías: te avisamos apenas aparezca {{UNA_FECHA}} cerca. Gratis y sin cuenta.</p>
 </header>
 
-<main class="tablero">
+<main class="tablero" id="tablero">
   <div class="elige">
-    <select id="pais" aria-label="País"></select>
+    <label class="oculto" for="pais">País</label>
+    <select id="pais"></select>
     <div class="busca">
-      <input id="dir" type="text" placeholder="Tu ciudad o localidad" autocomplete="off" aria-label="Tu ciudad o localidad">
-      <div id="sugerencias"></div>
+      <label class="oculto" for="dir">Tu ciudad o localidad</label>
+      <input id="dir" type="text" placeholder="Tu ciudad o localidad" autocomplete="off" spellcheck="false" enterkeyhint="search"
+        role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="sugerencias">
+      <div id="sugerencias" role="listbox" aria-label="Ciudades sugeridas"></div>
+      <p id="sug-estado" class="oculto" role="status"></p>
     </div>
   </div>
 
   <div class="lienzo">
-    <svg id="mapa" role="application" aria-label="Mapa con las próximas fechas de {{NOMBRE}}"></svg>
+    <svg id="mapa" role="application" tabindex="0" aria-label="Mapa con las próximas fechas de {{NOMBRE}}" aria-describedby="mapa-ayuda"></svg>
+    <p id="mapa-ayuda" class="oculto">El mapa es un apoyo visual: todo se puede hacer con el buscador de ciudad y la lista de fechas. Con el teclado, las flechas lo mueven y las teclas más y menos lo acercan o alejan.</p>
     <div class="botones">
       <button id="mas" type="button" aria-label="Acercar">+</button>
       <button id="menos" type="button" aria-label="Alejar">−</button>
@@ -48,18 +54,22 @@
   </div>
 
   <div class="radio-fila">
-    <label for="radio">Hasta</label>
-    <b class="km"><span id="kmv">50</span> km</b>
-    <input id="radio" type="range" min="10" max="500" step="5" value="50">
+    <label for="kmn">Hasta</label>
+    <button id="km-menos" type="button" aria-label="Achicar el radio">−</button>
+    <input id="kmn" type="number" inputmode="numeric" min="10" max="500" step="5" value="50" aria-describedby="km-unidad">
+    <span id="km-unidad" class="km">km</span>
+    <button id="km-mas" type="button" aria-label="Agrandar el radio">+</button>
+    <input id="radio" type="range" min="10" max="500" step="1" value="50" aria-label="Radio en kilómetros, con barra">
   </div>
 
   <div class="lista">
     <h2>Próximas fechas <span id="donde" aria-live="polite"></span></h2>
-    <div id="fechas">{{FECHAS_HTML}}</div>
+    <div id="fechas" role="list" aria-label="Próximas fechas" tabindex="0">{{FECHAS_HTML}}</div>
   </div>
 
   <div class="avisar">
     <button id="suscribir" type="button">Avisame si viene cerca</button>
+    <button id="baja" type="button" class="sec" hidden>Dejar de avisarme</button>
     <p id="msg" class="nota" aria-live="polite"></p>
   </div>
 </main>
