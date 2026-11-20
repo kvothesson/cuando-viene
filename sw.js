@@ -11,17 +11,22 @@ self.addEventListener("push", (e) => e.waitUntil((async () => {
     ms = (await r.json()).mensajes || [];
   } catch (err) {}
   if (!ms.length) ms = [{ titulo: "🎟 Hay una fecha nueva cerca tuyo", cuerpo: "Tocá para verla.", url: ACA, mapa: ACA }];
-  for (const m of ms) await self.registration.showNotification(m.titulo, {
-    body: m.cuerpo,
-    icon: ACA + "motor/icono.png",       // el cuadrado amarillo: se reconoce de un vistazo
-    badge: ACA + "motor/insignia.png",   // lo que queda en la barra del celular
-    image: m.imagen || undefined,        // la tarjeta del artista, en grande donde el sistema la muestra
-    requireInteraction: true,            // no se va sola: queda hasta que la tocás o la cerrás
-    vibrate: [200, 100, 200, 100, 400],
-    tag: m.marca || m.url, renotify: true, // una por fecha: si se repite, reemplaza a la anterior y vuelve a sonar
-    actions: [{ action: "entradas", title: "Ver entradas" }, { action: "mapa", title: "Ver en el mapa" }],
-    data: { url: m.url, mapa: m.mapa || ACA },
-  });
+  for (const m of ms) {
+    const base = { body: m.cuerpo, icon: ACA + "motor/icono.png", data: { url: m.url, mapa: m.mapa || ACA } };
+    try {
+      await self.registration.showNotification(m.titulo, Object.assign({}, base, {
+        badge: ACA + "motor/insignia.png",   // lo que queda en la barra del celular
+        image: m.imagen || undefined,        // la tarjeta del artista, en grande donde el sistema la muestra
+        requireInteraction: true,            // no se va sola: queda hasta que la tocás o la cerrás
+        vibrate: [200, 100, 200, 100, 400],
+        tag: m.marca || m.url, renotify: true, // una por fecha: si se repite, reemplaza a la anterior y vuelve a sonar
+        actions: [{ action: "entradas", title: "Ver entradas" }, { action: "mapa", title: "Ver en el mapa" }],
+      }));
+    } catch (err) {
+      // si a este navegador no le gusta alguna opción, que el aviso salga igual, simple
+      await self.registration.showNotification(m.titulo, base);
+    }
+  }
 })()));
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
