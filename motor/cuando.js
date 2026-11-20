@@ -68,7 +68,8 @@
     svg.append(gMundo, gTierra, gSobre);
 
     const vista = { cx: -63.5, cy: 44.7, w: 30 };
-    let auto = false; // true mientras la página propone un lugar por su cuenta: ese no se recuerda
+    // Lo último que elegiste (país, ciudad, radio) queda guardado en tu navegador y vale en todas las páginas
+    function recordar() { guardar(Object.assign(yo ? { lat: yo.lat, lon: yo.lon, nombre: yo.nombre } : {}, { cc: yo ? yo.cc : paisSel, km: +radio.value })); }
     let upp = 1, yo = null, deptos = [], localidades = null, paisSel = "AR", mundo = [], verPendiente = "";
     const porPais = {}, selPais = $("pais");
 
@@ -224,7 +225,10 @@
       caja.replaceChildren();
       if (!fechas.length) { caja.append(html("p", "nota", "Por ahora no hay fechas anunciadas.")); return; }
       const lim = +radio.value;
-      for (const f of fechas) {
+      // con un lugar elegido, primero las que entran en tu radio
+      const cerca = (f) => (yo && f.lat != null && km(yo, f) <= lim ? 0 : 1);
+      const orden = yo ? fechas.map((f, i) => [cerca(f), i, f]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map((x) => x[2]) : fechas;
+      for (const f of orden) {
         const [, m, d] = f.fecha.split("-");
         const fila = html("div", "fecha");
         const dia = html("div", "dia");
@@ -253,8 +257,8 @@
     // ---------- tu punto ----------
     function ponerYo(lat, lon, nombre, sinEncuadrar, cc) {
       yo = { lat, lon, nombre: nombre || "", cc: cc || paisSel }; // siempre el centro de una localidad
-      $("donde").textContent = nombre ? "Estás en " + nombre : "";
-      if (!auto) guardar({ lat: yo.lat, lon: yo.lon, nombre: yo.nombre, cc: yo.cc, km: +radio.value });
+      $("donde").textContent = nombre ? "· cerca de " + nombre : "";
+      recordar();
       if (!sinEncuadrar) encuadrarRadio(); else pintarSobre();
       pintarFechas(); armarCalendario();
     }
@@ -275,7 +279,7 @@
       encuadrarCirculo(yo, +radio.value, 0.25);
     }
     radio.addEventListener("input", () => { kmv.textContent = radio.value; pintarSobre(); pintarFechas(); armarCalendario(); });
-    radio.addEventListener("change", () => { medir("radio", radio.value <= 30 ? "hasta 30" : radio.value <= 80 ? "31 a 80" : radio.value <= 200 ? "81 a 200" : "más de 200"); encuadrarRadio(); if (yo) guardar({ lat: yo.lat, lon: yo.lon, nombre: yo.nombre, cc: yo.cc, km: +radio.value }); });
+    radio.addEventListener("change", () => { medir("radio", radio.value <= 30 ? "hasta 30" : radio.value <= 80 ? "31 a 80" : radio.value <= 200 ? "81 a 200" : "más de 200"); encuadrarRadio(); recordar(); });
 
     // ---------- mover el mapa ----------
     const dedos = new Map();
@@ -419,37 +423,42 @@
     }).catch(() => {});
 
     // ---------- arranque: país y lugar ----------
-    // El país se adivina por el huso horario del navegador: no se consulta ningún servicio ni se rastrea a nadie.
-    const previo = leer();
-    const hayPrevio = previo && typeof previo.lat === "number";
+    // Manda la página: la de una ciudad o un país arranca parada ahí y lo deja elegido.
+    // Si no, vale lo último que elegiste. Y si es tu primera vez, el país se adivina por el
+    // huso horario del navegador: no se consulta ningún servicio ni se rastrea a nadie.
+    const previo = leer() || {};
+    if (previo.km) { radio.value = previo.km; kmv.textContent = radio.value; }
     pintarFechas();
     Promise.all([
       fetch(base + "datos/paises.json").then((r) => r.json()).catch(() => ({ AR: "Argentina" })),
-      hayPrevio && previo.cc ? null : fetch(base + "datos/husos.json").then((r) => r.json()).catch(() => null),
+      previo.cc ? null : fetch(base + "datos/husos.json").then((r) => r.json()).catch(() => null),
     ]).then(([nombres, husos]) => {
       if (selPais) {
         for (const [cc, n] of Object.entries(nombres)) { const o = document.createElement("option"); o.value = cc; o.textContent = n; selPais.append(o); }
-        selPais.onchange = () => { dir.value = ""; lista.replaceChildren(); cambiarPais(selPais.value, true); };
+        selPais.onchange = () => {
+          dir.value = ""; lista.replaceChildren();
+          if (yo && yo.cc !== selPais.value) { yo = null; $("donde").textContent = ""; pintarFechas(); }
+          cambiarPais(selPais.value, true).then(recordar);
+        };
       }
-      let cc = "AR";
-      if (hayPrevio && previo.cc) cc = previo.cc;
-      else if (husos) { try { cc = husos[Intl.DateTimeFormat().resolvedOptions().timeZone] || "AR"; } catch (e) {} }
+      let cc = previo.cc || "AR";
+      if (!previo.cc && husos) { try { cc = husos[Intl.DateTimeFormat().resolvedOptions().timeZone] || "AR"; } catch (e) {} }
       if (!nombres[cc]) cc = "AR";
-      if (hayPrevio) {
-        if (previo.km) { radio.value = previo.km; kmv.textContent = radio.value; }
-        paisSel = cc; if (selPais) selPais.value = cc;
-        ponerYo(previo.lat, previo.lon, previo.nombre, false, cc);
+      const f = cfg.foco || {}, fcc = f.cc && nombres[f.cc] ? f.cc : "";
+      const tengo = typeof previo.lat === "number";
+      const elegir0 = (lat, lon, nombre, pais, sinEncuadrar) => {
+        paisSel = pais; if (selPais) selPais.value = pais;
+        ponerYo(lat, lon, nombre, sinEncuadrar, pais); dir.value = nombre || "";
         cargarLocalidades().then(pintarSobre);
-      } else {
-        // Página de un país o de una ciudad: arranca mirando ahí. Si es una ciudad, queda elegida
-        // (sin recordarla) para que el aviso esté a un toque.
-        const f = cfg.foco, fcc = f && f.cc && nombres[f.cc] ? f.cc : "";
-        const conPunto = !!f && typeof f.lat === "number";
-        cambiarPais(fcc || cc, !conPunto);
-        if (conPunto && f.nombre) { auto = true; ponerYo(f.lat, f.lon, f.nombre, false, fcc || cc); auto = false; dir.value = f.nombre; }
-        else if (conPunto) encuadrarCirculo(f, 250, 0.2);
-        armarCalendario();
+      };
+      if (typeof f.lat === "number" && f.nombre) elegir0(f.lat, f.lon, f.nombre, fcc || cc);           // página de una ciudad
+      else if (fcc) {                                                                               // página de un país
+        if (tengo && previo.cc === fcc) { elegir0(previo.lat, previo.lon, previo.nombre, fcc, true); verPais(fcc); }
+        else cambiarPais(fcc, true).then(recordar);
       }
+      else if (tengo) elegir0(previo.lat, previo.lon, previo.nombre, cc);                             // lo último que elegiste
+      else cambiarPais(cc, true);
+      armarCalendario();
     });
 
     return { ponerYo, pais, cambiarPais, elegirPorNombre: (q, cc) => (cc && cc !== paisSel ? cambiarPais(cc, false) : cargarLocalidades()).then(() => { dir.value = q; const r = sugerir(); if (r[0]) elegir(r[0]); return r[0] || null; }) };

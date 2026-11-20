@@ -16,18 +16,27 @@
 <meta name="theme-color" content="#14110f">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../motor/cuando.css?v=7234129a">
+<link rel="stylesheet" href="../../motor/cuando.css?v=8132d6ed">
 <style>:root{ --acento:#ffcc33; }</style>
 <script type="application/ld+json">[{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Cuándo viene", "item": "https://kvothesson.com/cuando-viene/"}, {"@type": "ListItem", "position": 2, "name": "Lucho Mellera", "item": "https://kvothesson.com/cuando-viene/lucho-mellera/"}, {"@type": "ListItem", "position": 3, "name": "España", "item": "https://kvothesson.com/cuando-viene/lucho-mellera/espana/"}, {"@type": "ListItem", "position": 4, "name": "Sevilla", "item": "https://kvothesson.com/cuando-viene/lucho-mellera/sevilla/"}]}]</script>
 </head>
 <body>
+<div class="pantalla">
 <header>
   <nav class="migas" aria-label="Estás en"><a href="https://kvothesson.com/cuando-viene/">Cuándo viene</a> › <a href="https://kvothesson.com/cuando-viene/lucho-mellera/">Lucho Mellera</a> › <a href="https://kvothesson.com/cuando-viene/lucho-mellera/espana/">España</a> › <span>Sevilla</span></nav>
   <h1>¿Cuándo viene <span>Lucho Mellera</span> a Sevilla?</h1>
-  <p class="bajada">Sus próximas fechas en el mapa. Elegí tu ciudad y a cuántos km estás dispuesto a ir, y te avisamos apenas aparezca una función cerca. Gratis y sin cuenta.</p>
+  <p class="bajada">Elegí tu ciudad y a cuántos km irías: te avisamos apenas aparezca una función cerca. Gratis y sin cuenta.</p>
 </header>
 
-<main>
+<main class="tablero">
+  <div class="elige">
+    <select id="pais" aria-label="País"></select>
+    <div class="busca">
+      <input id="dir" type="text" placeholder="Tu ciudad o localidad" autocomplete="off" aria-label="Tu ciudad o localidad">
+      <div id="sugerencias"></div>
+    </div>
+  </div>
+
   <div class="lienzo">
     <svg id="mapa" role="application" aria-label="Mapa con las próximas fechas de Lucho Mellera"></svg>
     <div class="botones">
@@ -37,39 +46,32 @@
     </div>
     <p class="ayuda">Tocá el mapa para elegir tu ciudad</p>
   </div>
-  <aside>
-    <div class="caja">
-      <h2>Dónde estás</h2>
-      <select id="pais" aria-label="País"></select>
-      <input id="dir" type="text" placeholder="Tu ciudad o localidad" autocomplete="off" aria-label="Tu ciudad o localidad">
-      <div id="sugerencias"></div>
-      <p id="donde" aria-live="polite"></p>
-      <p class="nota">Solo usamos tu ciudad o localidad. No pedimos ni guardamos tu dirección.</p>
-      <label for="radio">Hasta qué distancia me interesa</label>
-      <div class="km"><span id="kmv">50</span> km</div>
-      <input id="radio" type="range" min="10" max="500" step="5" value="50">
-    </div>
 
-    <div class="caja">
-      <h2>Próximas fechas de Lucho Mellera</h2>
-      <div id="fechas"><div class="fecha"><div class="dia"><b>21</b><small>nov</small></div><div><div class="lugar">Estadio Ruca Che <span class="sello">Agotado</span></div><div class="meta">Neuquén · 21:00 h</div><a href="https://www.entradauno.com/landing/el-unipersonal-de-lucho-mellera" target="_blank" rel="noopener">Ver igual →</a></div></div><div class="fecha"><div class="dia"><b>12</b><small>dic</small></div><div><div class="lugar">Teatro Argentino de La Plata <span class="sello">Agotado</span></div><div class="meta">La Plata · 21:00 h</div><a href="https://livepass.com.ar/events/el-unipersonal-de-lucho-mellera-en-la-sala-ginastera-teatro-argentino-la-plata" target="_blank" rel="noopener">Ver igual →</a></div></div><div class="fecha"><div class="dia"><b>25</b><small>feb</small></div><div><div class="lugar">Teatro Peruano Japonés <span class="sello">Agotado</span></div><div class="meta">Lima · 20:00 h</div><a href="https://teleticket.com.pe/evento/el-unipersonal-de-lucho-mellera-teatro-peruano-japones" target="_blank" rel="noopener">Ver igual →</a></div></div><div class="fecha"><div class="dia"><b>26</b><small>feb</small></div><div><div class="lugar">Teatro Peruano Japonés <span class="sello">Agotado</span></div><div class="meta">Lima · 20:00 h</div><a href="https://teleticket.com.pe/evento/el-unipersonal-de-lucho-mellera-teatro-peruano-japones" target="_blank" rel="noopener">Ver igual →</a></div></div><div class="fecha"><div class="dia"><b>27</b><small>feb</small></div><div><div class="lugar">Teatro Peruano Japonés <span class="sello">Agotado</span></div><div class="meta">Lima · 20:00 h</div><a href="https://teleticket.com.pe/evento/el-unipersonal-de-lucho-mellera-teatro-peruano-japones" target="_blank" rel="noopener">Ver igual →</a></div></div><div class="fecha"><div class="dia"><b>11</b><small>abr</small></div><div><div class="lugar">Movistar Arena</div><div class="meta">Santiago de Chile · 20:30 h</div><a href="https://www.puntoticket.com/lucho-mellera" target="_blank" rel="noopener">Entradas →</a></div></div><div class="fecha"><div class="dia"><b>24</b><small>may</small></div><div><div class="lugar">Movistar Arena</div><div class="meta">Madrid · 20:30 h</div><a href="https://tickets.baila.fm/el-unipersonal-de-lucho-mellera-en-madrid-2027" target="_blank" rel="noopener">Entradas →</a></div></div><div class="fecha"><div class="dia"><b>20</b><small>ago</small></div><div><div class="lugar">Movistar Arena</div><div class="meta">Bogotá · 20:00 h</div><a href="https://www.tuboleta.com/es/eventos/el-unipersonal-de-luciano-mellera" target="_blank" rel="noopener">Entradas →</a></div></div></div>
-    </div>
+  <div class="radio-fila">
+    <label for="radio">Hasta</label>
+    <b class="km"><span id="kmv">50</span> km</b>
+    <input id="radio" type="range" min="10" max="500" step="5" value="50">
+  </div>
 
-    <div class="caja">
-      <h2>Avisame</h2>
-      <button id="suscribir" type="button" class="ancho" style="margin-top:0">Avisame en este dispositivo</button>
-      <p class="nota">Una notificación apenas aparezca una fecha dentro de tu radio. Sin cuenta y sin mail. Si cambiás de celular o de navegador, activalo de nuevo.</p>
-      <p id="msg" class="nota" aria-live="polite"></p>
-    </div>
-  </aside>
+  <div class="lista">
+    <h2>Próximas fechas <span id="donde" aria-live="polite"></span></h2>
+    <div id="fechas"><div class="fecha"><div class="dia"><b>21</b><small>nov</small></div><div><div class="lugar">Estadio Ruca Che <span class="sello">Agotado</span></div><div class="meta">Neuquén · 21:00 h</div><a href="https://www.entradauno.com/landing/el-unipersonal-de-lucho-mellera" target="_blank" rel="noopener">Ver igual →</a></div></div><div class="fecha"><div class="dia"><b>12</b><small>dic</small></div><div><div class="lugar">Teatro Argentino de La Plata <span class="sello">Agotado</span></div><div class="meta">La Plata · 21:00 h</div><a href="https://livepass.com.ar/events/el-unipersonal-de-lucho-mellera-en-la-sala-ginastera-teatro-argentino-la-plata" target="_blank" rel="noopener">Ver igual →</a></div></div><div class="fecha"><div class="dia"><b>25</b><small>feb</small></div><div><div class="lugar">Teatro Peruano Japonés <span class="sello">Agotado</span></div><div class="meta">Lima · 20:00 h</div><a href="https://teleticket.com.pe/evento/el-unipersonal-de-lucho-mellera-teatro-peruano-japones" target="_blank" rel="noopener">Ver igual →</a></div></div><div class="fecha"><div class="dia"><b>26</b><small>feb</small></div><div><div class="lugar">Teatro Peruano Japonés <span class="sello">Agotado</span></div><div class="meta">Lima · 20:00 h</div><a href="https://teleticket.com.pe/evento/el-unipersonal-de-lucho-mellera-teatro-peruano-japones" target="_blank" rel="noopener">Ver igual →</a></div></div><div class="fecha"><div class="dia"><b>27</b><small>feb</small></div><div><div class="lugar">Teatro Peruano Japonés <span class="sello">Agotado</span></div><div class="meta">Lima · 20:00 h</div><a href="https://teleticket.com.pe/evento/el-unipersonal-de-lucho-mellera-teatro-peruano-japones" target="_blank" rel="noopener">Ver igual →</a></div></div><div class="fecha"><div class="dia"><b>11</b><small>abr</small></div><div><div class="lugar">Movistar Arena</div><div class="meta">Santiago de Chile · 20:30 h</div><a href="https://www.puntoticket.com/lucho-mellera" target="_blank" rel="noopener">Entradas →</a></div></div><div class="fecha"><div class="dia"><b>24</b><small>may</small></div><div><div class="lugar">Movistar Arena</div><div class="meta">Madrid · 20:30 h</div><a href="https://tickets.baila.fm/el-unipersonal-de-lucho-mellera-en-madrid-2027" target="_blank" rel="noopener">Entradas →</a></div></div><div class="fecha"><div class="dia"><b>20</b><small>ago</small></div><div><div class="lugar">Movistar Arena</div><div class="meta">Bogotá · 20:00 h</div><a href="https://www.tuboleta.com/es/eventos/el-unipersonal-de-luciano-mellera" target="_blank" rel="noopener">Entradas →</a></div></div></div>
+  </div>
+
+  <div class="avisar">
+    <button id="suscribir" type="button">Avisame si viene cerca</button>
+    <p id="msg" class="nota" aria-live="polite"></p>
+  </div>
 </main>
+</div>
 
 <section class="texto">
   <h2>Lucho Mellera en Sevilla</h2>
   <p>Lucho Mellera todavía no anunció una función en Sevilla, España.</p><p><strong>Las fechas más cercanas a Sevilla:</strong> <a href="../madrid/">Madrid</a> (24 de mayo de 2027, a 391 km); <a href="../bogota/">Bogotá</a> (20 de agosto de 2027, a 7.770 km); <a href="../lima/">Lima</a> (25 de febrero de 2027, agotado, a 9.205 km).</p><p>El mapa ya está parado en Sevilla: elegí hasta cuántos km te sirve viajar y activá el aviso.</p>
   <h2>Lucho Mellera por país y ciudad</h2><p class="chips"><a href="../argentina/">Argentina</a><a href="../peru/">Perú</a><a href="../chile/">Chile</a><a href="../espana/">España</a><a href="../colombia/">Colombia</a></p><p class="chips"><a href="../neuquen/">Neuquén</a><a href="../la-plata/">La Plata</a><a href="../lima/">Lima</a><a href="../santiago-de-chile/">Santiago de Chile</a><a href="../madrid/">Madrid</a><a href="../bogota/">Bogotá</a><a href="../buenos-aires/">Buenos Aires</a><a href="../cordoba/">Córdoba</a><a href="../san-miguel-de-tucuman/">San Miguel de Tucumán</a><a href="../salta/">Salta</a><a href="../santa-fe/">Santa Fe</a><a href="../corrientes/">Corrientes</a><a href="../rosario/">Rosario</a><a href="../posadas/">Posadas</a><a href="../san-salvador-de-jujuy/">San Salvador de Jujuy</a><a href="../santiago-del-estero/">Santiago del Estero</a><a href="../formosa/">Formosa</a><a href="../mar-del-plata/">Mar del Plata</a><a href="../la-rioja/">La Rioja</a><a href="../san-luis/">San Luis</a><a href="../catamarca/">Catamarca</a><a href="../rawson/">Rawson</a><a href="../mendoza/">Mendoza</a><a href="../santa-rosa/">Santa Rosa</a><a href="../bahia-blanca/">Bahía Blanca</a><a href="../rio-gallegos/">Río Gallegos</a><a href="../arequipa/">Arequipa</a><a href="../trujillo/">Trujillo</a><a href="../piura/">Piura</a><a href="../chiclayo/">Chiclayo</a><a href="../huancayo/">Huancayo</a><a href="../antofagasta/">Antofagasta</a><a href="../valparaiso/">Valparaíso</a><a href="../puerto-montt/">Puerto Montt</a><a href="../arica/">Arica</a><a href="../temuco/">Temuco</a><a href="../barcelona/">Barcelona</a><a href="../valencia/">Valencia</a><a href="../zaragoza/">Zaragoza</a><a href="../murcia/">Murcia</a><a href="../cali/">Cali</a><a href="../medellin/">Medellín</a><a href="../barranquilla/">Barranquilla</a><a href="../cartagena/">Cartagena</a><a href="../cucuta/">Cúcuta</a></p>
   <h2>¿Cómo me entero cuando venga a mi ciudad?</h2>
-  <p>Elegí tu ciudad en el mapa, mové la distancia hasta donde te sirva viajar y tocá “Avisame en este dispositivo”. Revisamos la agenda de Lucho Mellera cada 30 minutos y, cuando aparece una función dentro de tu radio, te llega una notificación con el link a las entradas. No hace falta cuenta ni mail.</p>
+  <p>Elegí tu ciudad en el mapa, mové la distancia hasta donde te sirva viajar y tocá “Avisame si viene cerca”. Revisamos la agenda de Lucho Mellera cada 30 minutos y, cuando aparece una función dentro de tu radio, te llega una notificación a ese dispositivo con el link a las entradas.</p>
+  <p>No hace falta cuenta ni mail. Solo usamos la ciudad que elegís: no pedimos ni guardamos tu dirección ni tu ubicación. Si cambiás de celular o de navegador, activá el aviso de nuevo.</p>
 </section>
 
 <footer>
@@ -77,7 +79,7 @@
   · <a href="../../">Más artistas</a> · <a href="https://kvothesson.com/">kvothesson.com</a>
 </footer>
 
-<script src="../../motor/cuando.js?v=7234129a"></script>
+<script src="../../motor/cuando.js?v=8132d6ed"></script>
 <script>
 window.app = CuandoViene({
   base: "../../",

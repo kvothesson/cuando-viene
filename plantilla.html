@@ -20,13 +20,22 @@
 <script type="application/ld+json">{{JSONLD}}</script>
 </head>
 <body>
+<div class="pantalla">
 <header>
   {{MIGAS}}
   <h1>{{H1}}</h1>
-  <p class="bajada">Sus próximas fechas en el mapa. Elegí tu ciudad y a cuántos km estás dispuesto a ir, y te avisamos apenas aparezca {{UNA_FECHA}} cerca. Gratis y sin cuenta.</p>
+  <p class="bajada">Elegí tu ciudad y a cuántos km irías: te avisamos apenas aparezca {{UNA_FECHA}} cerca. Gratis y sin cuenta.</p>
 </header>
 
-<main>
+<main class="tablero">
+  <div class="elige">
+    <select id="pais" aria-label="País"></select>
+    <div class="busca">
+      <input id="dir" type="text" placeholder="Tu ciudad o localidad" autocomplete="off" aria-label="Tu ciudad o localidad">
+      <div id="sugerencias"></div>
+    </div>
+  </div>
+
   <div class="lienzo">
     <svg id="mapa" role="application" aria-label="Mapa con las próximas fechas de {{NOMBRE}}"></svg>
     <div class="botones">
@@ -36,39 +45,32 @@
     </div>
     <p class="ayuda">Tocá el mapa para elegir tu ciudad</p>
   </div>
-  <aside>
-    <div class="caja">
-      <h2>Dónde estás</h2>
-      <select id="pais" aria-label="País"></select>
-      <input id="dir" type="text" placeholder="Tu ciudad o localidad" autocomplete="off" aria-label="Tu ciudad o localidad">
-      <div id="sugerencias"></div>
-      <p id="donde" aria-live="polite"></p>
-      <p class="nota">Solo usamos tu ciudad o localidad. No pedimos ni guardamos tu dirección.</p>
-      <label for="radio">Hasta qué distancia me interesa</label>
-      <div class="km"><span id="kmv">50</span> km</div>
-      <input id="radio" type="range" min="10" max="500" step="5" value="50">
-    </div>
 
-    <div class="caja">
-      <h2>Próximas fechas de {{NOMBRE}}</h2>
-      <div id="fechas">{{FECHAS_HTML}}</div>
-    </div>
+  <div class="radio-fila">
+    <label for="radio">Hasta</label>
+    <b class="km"><span id="kmv">50</span> km</b>
+    <input id="radio" type="range" min="10" max="500" step="5" value="50">
+  </div>
 
-    <div class="caja">
-      <h2>Avisame</h2>
-      <button id="suscribir" type="button" class="ancho" style="margin-top:0">Avisame en este dispositivo</button>
-      <p class="nota">Una notificación apenas aparezca una fecha dentro de tu radio. Sin cuenta y sin mail. Si cambiás de celular o de navegador, activalo de nuevo.</p>
-      <p id="msg" class="nota" aria-live="polite"></p>
-    </div>
-  </aside>
+  <div class="lista">
+    <h2>Próximas fechas <span id="donde" aria-live="polite"></span></h2>
+    <div id="fechas">{{FECHAS_HTML}}</div>
+  </div>
+
+  <div class="avisar">
+    <button id="suscribir" type="button">Avisame si viene cerca</button>
+    <p id="msg" class="nota" aria-live="polite"></p>
+  </div>
 </main>
+</div>
 
 <section class="texto">
   <h2>{{H2}}</h2>
   {{RESUMEN_HTML}}
   {{ENLACES_HTML}}
   <h2>¿Cómo me entero cuando venga a mi ciudad?</h2>
-  <p>Elegí tu ciudad en el mapa, mové la distancia hasta donde te sirva viajar y tocá “Avisame en este dispositivo”. Revisamos la agenda de {{NOMBRE}} cada 30 minutos y, cuando aparece {{UNA_FECHA}} dentro de tu radio, te llega una notificación con el link a las entradas. No hace falta cuenta ni mail.</p>
+  <p>Elegí tu ciudad en el mapa, mové la distancia hasta donde te sirva viajar y tocá “Avisame si viene cerca”. Revisamos la agenda de {{NOMBRE}} cada 30 minutos y, cuando aparece {{UNA_FECHA}} dentro de tu radio, te llega una notificación a ese dispositivo con el link a las entradas.</p>
+  <p>No hace falta cuenta ni mail. Solo usamos la ciudad que elegís: no pedimos ni guardamos tu dirección ni tu ubicación. Si cambiás de celular o de navegador, activá el aviso de nuevo.</p>
 </section>
 
 <footer>
