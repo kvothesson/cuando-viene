@@ -40,15 +40,7 @@ O, para quien no puede cargar scripts (Wix, Linktree, algunos WordPress), un mar
 
 **Hecho cuando:** una página de prueba en otro dominio muestra el tablero con dos líneas pegadas, se puede elegir ciudad, y el aviso por Telegram queda activado sin salir de ahí.
 
-### 2. No contar las visitas propias
-
-**Qué:** abrir la página una vez con `?soyyo` y que ese navegador deje de sumar a las métricas.
-
-**Por qué:** hoy casi todo lo medido son pruebas, y no se puede separar del público real.
-
-**Hecho cuando:** con la marca puesta, el tablero no cambia al navegar.
-
-### 3. Mostrar si Telegram ya está activo
+### 2. Mostrar si Telegram ya está activo
 
 **Qué:** hoy la página sabe si este aparato tiene el aviso, pero no si la persona ya activó Telegram. El botón dice siempre "Por Telegram".
 
@@ -56,7 +48,7 @@ O, para quien no puede cargar scripts (Wix, Linktree, algunos WordPress), un mar
 
 **Hecho cuando:** después de tocar "Iniciar" en el bot, el botón pasa a decir "✓ Activo por Telegram".
 
-### 4. Rosario antes que Rosales
+### 3. Rosario antes que Rosales
 
 **Qué:** en Argentina el buscador ordena por coincidencia y no por tamaño de la localidad, porque los datos oficiales no traen población.
 
@@ -64,37 +56,37 @@ O, para quien no puede cargar scripts (Wix, Linktree, algunos WordPress), un mar
 
 **Hecho cuando:** "san" muestra primero las ciudades grandes.
 
-### 5. Poner al día la explicación de la arquitectura
+### 4. Poner al día la explicación de la arquitectura
 
 Falta Telegram: qué se guarda (el número del chat con el bot) y el recorrido del aviso por ahí.
 
 ## Pronto
 
-### 6. Segundo artista
+### 5. Segundo artista
 
 Nico de Tracy. Es la prueba de que sumar uno es de verdad una entrada en `artistas.json`. Si su agenda tiene otro formato, necesita su lector en `nube/fuentes.js`.
 
-### 7. Avisar cuando se liberan entradas
+### 6. Avisar cuando se liberan entradas
 
 Hoy solo se avisa por fechas nuevas. Si una fecha agotada vuelve a tener entradas, o suman una función en la misma ciudad, es justo lo que alguien cerca quiere saber.
 
-### 8. Mail como tercer canal
+### 7. Mail como tercer canal
 
 Para quien no usa Telegram. Tiene tope de 100 por día en el plan gratis, así que va por orden de llegada y la página lo dice cuando el cupo se llena.
 
-### 9. Revisar las páginas por ciudad en Google
+### 8. Revisar las páginas por ciudad en Google
 
 El 20 de noviembre de 2026 había 15 páginas de ciudad "rastreadas, sin indexar". Mirar de nuevo a mediados de diciembre. Si siguen afuera, bajar el tope de ciudades sin fecha.
 
-### 10. Probar con un lector de pantalla de verdad
+### 9. Probar con un lector de pantalla de verdad
 
 La estructura está revisada, pero nadie lo escuchó con TalkBack ni con NVDA. Anotar lo que suene mal y corregirlo.
 
-### 11. Que el robot avise solo cuando algo se rompe
+### 10. Que el robot avise solo cuando algo se rompe
 
 El aviso al dueño por Telegram ya existe (`/dueno`). Falta activarlo y sumar un chequeo: si el robot no corrió en 6 horas, que también avise.
 
-### 12. Regenerar las páginas cuando cambia una fecha
+### 11. Regenerar las páginas cuando cambia una fecha
 
 Hoy se reescriben una vez por día. Al abrir la página las fechas están al día igual, pero la copia que lee Google puede tener hasta 24 horas de atraso.
 

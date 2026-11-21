@@ -55,7 +55,21 @@
     const ordenar = (l) => l.filter((f) => f.fecha >= hoy).sort((a, b) => (a.fecha + (a.hora || "")).localeCompare(b.fecha + (b.hora || "")));
     let fechas = ordenar(cfg.fechas || []), vapid = cfg.vapid || "";
     // Métricas propias y anónimas. En local no se mandan, salvo con ?metricas
-    const mide = cfg.api && (!/^(localhost|127\.|\[::1\])/.test(location.hostname) || /[?&]metricas/.test(location.search));
+    // Para no contar las visitas propias: abrir una vez con ?soyyo y este navegador deja de sumar (?soyyo=no lo deshace)
+    const marca = /[?&]soyyo(?:=([^&]*))?(?:&|$)/.exec(location.search);
+    let soyYo = false;
+    try {
+      if (marca) { if (marca[1] === "no") localStorage.removeItem("cuandoviene-soyyo"); else localStorage.setItem("cuandoviene-soyyo", "1"); }
+      soyYo = localStorage.getItem("cuandoviene-soyyo") === "1";
+    } catch (e) {}
+    if (marca) {
+      const nota = html("div", "", soyYo ? "Listo: este navegador ya no suma a las métricas." : "Este navegador vuelve a sumar a las métricas.");
+      nota.setAttribute("role", "status");
+      nota.style.cssText = "position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:99;background:#14110f;color:#f3ece2;border:1px solid #ffcc33;border-radius:8px;padding:10px 14px;font:14px system-ui;max-width:90vw";
+      document.body.appendChild(nota);
+      setTimeout(() => nota.remove(), 6000);
+    }
+    const mide = cfg.api && !soyYo && (!/^(localhost|127\.|\[::1\])/.test(location.hostname) || /[?&]metricas/.test(location.search));
     const medidos = new Set();
     function medir(ev, k, unaVez) {
       if (!mide || (unaVez && medidos.has(ev))) return;
