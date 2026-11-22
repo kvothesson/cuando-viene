@@ -263,26 +263,18 @@ const punto = (u) => {
   return isFinite(lat) && isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 && radio >= 5 && radio <= 2000 ? { lat, lon, radio } : null;
 };
 
-// ---------------- tablero de métricas ----------------
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-async function panel(env) {
+// ---------------- resumen de métricas ----------------
+// Solo datos: el tablero se arma en la PC (taller: tablero/). Antes había un /panel acá.
+async function resumen(env) {
   const desde = new Date(Date.now() - 30 * 86400e3 - 3 * 3600e3).toISOString().slice(0, 10);
   const q = (sql, ...v) => env.DB.prepare(sql).bind(...v).all().then((r) => r.results);
-  const totales = await q("SELECT artista, ev, sum(n) n FROM metricas WHERE dia>=? GROUP BY artista, ev ORDER BY artista, ev", desde);
-  const dias = await q("SELECT dia, artista, ev, sum(n) n FROM metricas WHERE dia>=? GROUP BY dia, artista, ev ORDER BY dia DESC, artista, ev", desde);
-  const claves = await q("SELECT artista, ev, clave, sum(n) n FROM metricas WHERE dia>=? AND clave<>'' GROUP BY artista, ev, clave ORDER BY artista, ev, n DESC", desde);
-  const anotados = await q("SELECT artista, count(*) n FROM push GROUP BY artista");
-  const tabla = (cab, filas) => `<table><tr>${cab.map((c) => `<th>${c}</th>`).join("")}</tr>${filas.map((f) => `<tr>${f.map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</table>`;
-  const top = {};
-  for (const c of claves) { const k = c.artista + " · " + c.ev; (top[k] = top[k] || []).length < 15 && top[k].push([c.clave, c.n]); }
-  const html = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Cuándo viene · métricas</title>
-<style>body{font:15px system-ui;background:#14110f;color:#f3ece2;max-width:900px;margin:auto;padding:16px}table{border-collapse:collapse;margin:8px 0 24px}td,th{border:1px solid #3a332b;padding:4px 10px;text-align:left}th{color:#a99c8b}h2{color:#ffcc33}</style>
-<h1>Cuándo viene · últimos 30 días</h1>
-<h2>Dispositivos con aviso activo</h2>${tabla(["artista", "anotados"], anotados.map((r) => [r.artista, r.n]))}
-<h2>Totales</h2>${tabla(["artista", "evento", "veces"], totales.map((r) => [r.artista, r.ev, r.n]))}
-${Object.entries(top).map(([k, f]) => `<h2>${esc(k)}</h2>${tabla(["valor", "veces"], f)}`).join("")}
-<h2>Por día</h2>${tabla(["día", "artista", "evento", "veces"], dias.map((r) => [r.dia, r.artista, r.ev, r.n]))}`;
-  return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+  return json({
+    desde,
+    totales: await q("SELECT artista, ev, sum(n) n FROM metricas WHERE dia>=? GROUP BY artista, ev ORDER BY artista, ev", desde),
+    dias: await q("SELECT dia, artista, ev, sum(n) n FROM metricas WHERE dia>=? GROUP BY dia, artista, ev ORDER BY dia DESC, artista, ev", desde),
+    claves: await q("SELECT artista, ev, clave, sum(n) n FROM metricas WHERE dia>=? AND clave<>'' GROUP BY artista, ev, clave ORDER BY artista, ev, n DESC", desde),
+    anotados: await q("SELECT artista, count(*) n FROM push GROUP BY artista"),
+  });
 }
 
 // ---------------- pedidos ----------------
@@ -351,9 +343,9 @@ async function pedido(req, env, ctx) {
       .bind(hoyAR(), a.slug, b.ev, String(b.k || "").slice(0, 40)).run();
     return json({ ok: true });
   }
-  if (p === "/panel") {
+  if (p === "/resumen") {
     if (!env.CLAVE || u.searchParams.get("clave") !== env.CLAVE) return json({ error: "sin permiso" }, 403);
-    return panel(env);
+    return resumen(env);
   }
 
   // Telegram: la página pide un enlace de un solo uso con la ciudad y el radio adentro
