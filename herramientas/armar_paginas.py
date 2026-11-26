@@ -48,6 +48,8 @@ TIPOS = {
     "musico": {"una_fecha": "un recital", "evento": "MusicEvent", "quien": "Person"},
 }
 e = html.escape
+DESCRIPCION = ("Elegí un artista y tu ciudad, en cualquier país: te mostramos sus fechas en el mapa y te avisamos gratis "
+               "cuando anuncie un show cerca tuyo. Sin cuenta y sin mail.")
 
 
 def pedir(slug):
@@ -382,17 +384,37 @@ def portada(artistas, datos, version):
         f'<a class="tarjeta" href="{a["slug"]}/" style="--acento:{a.get("acento", "#ffcc33")}"><b>{e(a["nombre"])}</b>'
         f'<span>{n} {"fecha" if n == 1 else "fechas"}{": " + e(prox) if prox else ""}</span></a>'
         for a, (n, prox, _) in zip(artistas, datos))
+    lista = "".join(
+        f'<a href="{a["slug"]}/">{e(a["nombre"])}, {e(a.get("tipo", "artista"))}'
+        f'{" (" + e(a["show"]) + ")" if a.get("show") else ""}: {n} {"fecha" if n == 1 else "fechas"}</a>'
+        for a, (n, _, _) in zip(artistas, datos))
+    org = {"@type": "Organization", "name": "Kvothesson", "url": "https://kvothesson.com/"}
+    ld = json.dumps([
+        {"@context": "https://schema.org", "@type": "WebApplication", "name": "Cuándo viene", "url": SITIO,
+         "description": DESCRIPCION, "inLanguage": "es", "applicationCategory": "EntertainmentApplication",
+         "operatingSystem": "Web", "isAccessibleForFree": True,
+         "offers": {"@type": "Offer", "price": 0, "priceCurrency": "ARS"}, "author": org, "publisher": org},
+        {"@context": "https://schema.org", "@type": "ItemList", "name": "Artistas en Cuándo viene",
+         "itemListElement": [{"@type": "ListItem", "position": i + 1, "name": a["nombre"], "url": f"{SITIO}{a['slug']}/"}
+                             for i, a in enumerate(artistas)]},
+    ], ensure_ascii=False).replace("</", "<\\/")
     (RAIZ / "index.html").write_text(f'''<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cuándo viene: fechas de tus artistas cerca tuyo, con aviso gratis</title>
-<meta name="description" content="Elegí un artista y tu ciudad, en cualquier país: te mostramos sus fechas en el mapa y te avisamos gratis cuando anuncie un show cerca tuyo. Sin cuenta y sin mail.">
+<meta name="description" content="{DESCRIPCION}">
 <link rel="canonical" href="{SITIO}">
+<meta property="og:type" content="website">
 <meta property="og:title" content="Cuándo viene: fechas de tus artistas cerca tuyo">
+<meta property="og:description" content="{DESCRIPCION}">
 <meta property="og:url" content="{SITIO}">
+<meta property="og:locale" content="es_AR">
+<meta name="twitter:card" content="summary">
 <meta name="theme-color" content="#14110f">
+<link rel="icon" type="image/png" href="motor/icono.png?v=2">
+<script type="application/ld+json">{ld}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="motor/cuando.css?v={version}">
@@ -403,7 +425,15 @@ def portada(artistas, datos, version):
   <h1>¿Cuándo viene <span>a tu ciudad</span>?</h1>
   <p class="bajada">Elegí un artista y tu ciudad, en cualquier país. Te mostramos sus fechas en el mapa y te avisamos apenas anuncie un show cerca tuyo. Gratis y sin cuenta.</p>
 </header>
-<section class="texto"><div class="tarjetas">{tarjetas}</div></section>
+<section class="texto"><div class="tarjetas">{tarjetas}</div>
+  <h2>¿Qué es Cuándo viene?</h2>
+  <p>Una página gratis para fans que quieren saber cuándo viene su artista a su ciudad. Leemos la agenda oficial de cada artista y otras agendas de shows cada 30 minutos, y mostramos las fechas en un mapa propio, en cualquier país.</p>
+  <h2>¿Cómo me entero cuando venga a mi ciudad?</h2>
+  <p>Entrá a la página del artista, elegí tu ciudad, mové la distancia hasta donde te sirva viajar y activá el aviso en el celular, en la compu o por Telegram. Cuando anuncia una fecha dentro de ese radio, te llega una notificación con el link a las entradas.</p>
+  <p>No hace falta cuenta ni mail. Solo usamos la ciudad que elegís: no pedimos ni guardamos tu dirección ni tu ubicación.</p>
+  <h2>Artistas</h2>
+  <div class="chips">{lista}</div>
+</section>
 <footer>Páginas de fans, no oficiales. · <a href="https://kvothesson.com/">kvothesson.com</a></footer>
 </body>
 </html>
